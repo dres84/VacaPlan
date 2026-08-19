@@ -48,8 +48,6 @@ Page {
                 width: root.width
                 spacing: Style.mediumSpace
 
-                Item { Layout.preferredHeight: Style.smallSpace }
-
                 // Title
                 ColumnLayout {
                     Layout.fillWidth: true

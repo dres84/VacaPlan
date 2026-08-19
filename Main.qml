@@ -66,8 +66,10 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
-        stackView.push(Qt.resolvedUrl("qml/OnboardingUsedDaysPage.qml"), {
-            dataCenter: dataCenter, holidayProvider: holidayProvider, picking: true
-        })
+        if (dataCenter.onboardingCompleted()) {
+            stackView.goToHome()
+        } else {
+            stackView.goToLocationPage()
+        }
     }
 }

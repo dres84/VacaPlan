@@ -77,6 +77,10 @@ QtObject {
     function scopeIcon(scope) {
         switch (scope) {
             case "nacional": return icon("flag-national")
+            // The real API returns "autonomico" (no accent); "regional" is
+            // kept as an alias since some UI reuses these tokens decoratively
+            // (e.g. a coral badge) without an actual holiday scope behind it.
+            case "autonomico":
             case "regional": return icon("flag-region")
             case "provincial": return icon("flag-provincial")
             case "local": return icon("flag-local")
@@ -88,6 +92,7 @@ QtObject {
     function scopeLabel(scope) {
         switch (scope) {
             case "nacional": return "Nacional"
+            case "autonomico":
             case "regional": return "Autonómico"
             case "provincial": return "Provincial"
             case "local": return "Local"
@@ -99,6 +104,7 @@ QtObject {
     function scopeColor(scope) {
         switch (scope) {
             case "nacional": return "#0E7C7B"
+            case "autonomico":
             case "regional": return "#FF6B4A"
             case "provincial": return "#3C6E70"
             case "local": return "#6B7A80"

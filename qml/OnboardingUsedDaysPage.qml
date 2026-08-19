@@ -27,6 +27,20 @@ Page {
     property bool picking: false
     property int calendarMonth: new Date().getMonth()
     property string dayManual: ""
+    property string highlightKey: ""
+
+    // One hue per month, evenly spaced, so each used day reads as "which
+    // month" at a glance in the chip list and in the calendar itself —
+    // matches the design's 12 oklch(58% 0.10 hue) swatches closely enough
+    // with HSL, which QML supports natively.
+    readonly property var monthColors: {
+        var arr = []
+        for (var i = 0; i < 12; i++) {
+            var hue = ((160 + i * 32) % 360) / 360
+            arr.push(Qt.hsla(hue, 0.38, 0.40, 1))
+        }
+        return arr
+    }
 
     property bool hoursOpen: false
     property string hoursDate: ""
@@ -34,17 +48,29 @@ Page {
     readonly property var hourEntries: dataCenter && dataCenter.data.usedVacationHourEntries ? dataCenter.data.usedVacationHourEntries : []
 
     readonly property int usedTotal: mode === "dates" ? usedDatesList.length : usedCount
-    readonly property int leftDays: Math.max(0, totalDays - usedTotal)
+    // No longer clamped to 0: going over the total is a real, visible state
+    // (shown in coral), not silently hidden.
+    readonly property int leftDays: totalDays - usedTotal
     readonly property real usedPct: totalDays > 0 ? Math.min(1, usedCount / totalDays) : 0
 
     function isoFor(day, month) {
         return root.year + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0")
     }
 
+    function dayMonthFor(iso) {
+        var p = iso.split("-")
+        return { day: parseInt(p[2]), month: parseInt(p[1]) - 1 }
+    }
+
     function shortLabel(iso) {
         var p = iso.split("-")
         var d = parseInt(p[2]); var m = parseInt(p[1]) - 1
         return d + " de " + months[m] + " de " + p[0]
+    }
+
+    function shortChipLabel(iso) {
+        var dm = root.dayMonthFor(iso)
+        return dm.day + " " + root.months[dm.month].slice(0, 3)
     }
 
     function weekdayLabel(iso) {
@@ -61,9 +87,75 @@ Page {
         root.usedDatesList = list
     }
 
+    // Explicit add/remove (not a toggle) so a drag gesture across several
+    // cells can apply the same action to every cell it passes over, instead
+    // of re-toggling a cell back off when the drag crosses it twice.
+    function setDaySelected(day, month, add) {
+        var iso = root.isoFor(day, month)
+        var list = root.usedDatesList.slice()
+        var idx = list.indexOf(iso)
+        if (add && idx === -1) { list.push(iso); list.sort(); root.usedDatesList = list }
+        else if (!add && idx !== -1) { list.splice(idx, 1); root.usedDatesList = list }
+    }
+
+    // Jumps the picker to the month of `iso` and briefly outlines that cell,
+    // so tapping a chip in the used-days list shows you exactly where that
+    // day lives on the calendar.
+    function goToDay(day, month) {
+        root.calendarMonth = month
+        root.highlightKey = day + ":" + month
+        root.picking = true
+        highlightTimer.restart()
+    }
+
+    Timer {
+        id: highlightTimer
+        interval: 1400
+        onTriggered: root.highlightKey = ""
+    }
+
+    // The picker card has its own entrance animation (opacity/y, 220ms). If
+    // we scroll it into view immediately on Loader.onLoaded, we'd measure
+    // its position mid-animation and land somewhere wrong — same lesson as
+    // step 1's ensureVisible, so the actual scroll is delayed until that
+    // animation is done.
+    Timer {
+        id: ensureVisibleTimer
+        property var targetItem: null
+        interval: 260
+        onTriggered: root.ensureVisible(targetItem)
+    }
+    function scheduleEnsureVisible(item) {
+        ensureVisibleTimer.targetItem = item
+        ensureVisibleTimer.restart()
+    }
+    function ensureVisible(item) {
+        if (!item) return
+        var flick = scrollView
+        var pad = 16
+        var pos = item.mapToItem(flick, 0, 0)
+        var itemTop = pos.y
+        var itemBottom = itemTop + item.height
+        var viewH = flick.height
+        var delta = 0
+        var fitsInView = (item.height + pad * 2) <= viewH
+        if (fitsInView) {
+            if (itemBottom + pad > viewH) delta = itemBottom + pad - viewH
+            else if (itemTop - pad < 0) delta = itemTop - pad
+        } else if (itemTop < 0 || itemBottom > viewH) {
+            delta = itemTop - pad
+        }
+        if (delta === 0) return
+        var target = flick.contentY + delta
+        target = Math.max(0, Math.min(target, Math.max(0, flick.contentHeight - flick.height)))
+        scrollAnimation.to = target
+        scrollAnimation.restart()
+    }
+
     // Holidays for the calendar year shown in the picker (already fetched
     // and cached during step 1), so the mini-calendar can mark national/
-    // regional/local holidays with a colored dot, same as the real calendar.
+    // regional/local holidays with a tinted background, same as the real
+    // calendar.
     readonly property var holidaysThisYear: root.holidayProvider ? root.holidayProvider.loadCachedHolidays(root.year) : []
 
     function holidayForDate(iso) {
@@ -78,8 +170,20 @@ Page {
     // read visually as "local" here, there just isn't room for 5 dot colors.
     function dotColorFor(scope) {
         if (scope === "nacional") return Style.scopeColor("nacional")
-        if (scope === "regional") return Style.scopeColor("regional")
+        if (scope === "autonomico" || scope === "regional") return Style.scopeColor("autonomico")
         return Style.scopeColor("manual")
+    }
+
+    // Holiday cells get a tinted background/border in the scope color
+    // (~15%/~33% alpha), not just a colored number — matches the design's
+    // hol.color + '26' / '55' hex-alpha suffixes.
+    function holidayTintBg(scope) {
+        var c = Qt.color(root.dotColorFor(scope))
+        return Qt.rgba(c.r, c.g, c.b, 0.15)
+    }
+    function holidayTintBorder(scope) {
+        var c = Qt.color(root.dotColorFor(scope))
+        return Qt.rgba(c.r, c.g, c.b, 0.33)
     }
 
     function calendarCells() {
@@ -125,12 +229,18 @@ Page {
 
             ScrollBar.vertical: ScrollBar {}
 
+            NumberAnimation {
+                id: scrollAnimation
+                target: scrollView
+                property: "contentY"
+                duration: 260
+                easing.type: Easing.OutCubic
+            }
+
             ColumnLayout {
                 id: pageColumn
                 width: root.width
                 spacing: Style.mediumSpace
-
-                Item { Layout.preferredHeight: Style.smallSpace }
 
                 // Title
                 ColumnLayout {
@@ -276,7 +386,7 @@ Page {
                             Text { text: "Te quedan"; font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary }
                             RowLayout {
                                 spacing: 4
-                                Text { text: root.leftDays; font.family: Style.fontFamily; font.pixelSize: 19; font.weight: Font.Bold; font.letterSpacing: -0.4; color: Style.primary }
+                                Text { text: root.leftDays; font.family: Style.fontFamily; font.pixelSize: 19; font.weight: Font.Bold; font.letterSpacing: -0.4; color: root.leftDays < 0 ? Style.accent : Style.primary }
                                 Text { text: "días"; font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary; Layout.alignment: Qt.AlignBaseline }
                             }
                         }
@@ -291,56 +401,56 @@ Page {
                     Layout.rightMargin: Style.mediumMargin
                     spacing: 12
 
-                    Rectangle {
+                    Flow {
                         visible: root.usedDatesList.length > 0
                         Layout.fillWidth: true
-                        Layout.preferredHeight: datesColumn.implicitHeight + 8
-                        radius: Style.listRadius
-                        color: Style.surface
-                        border.color: Style.divider
-                        border.width: 1
+                        spacing: 7
 
-                        ColumnLayout {
-                            id: datesColumn
-                            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                            anchors.margins: 4
-                            anchors.leftMargin: 16; anchors.rightMargin: 16
-                            spacing: 0
+                        Repeater {
+                            model: root.usedDatesList
+                            delegate: Rectangle {
+                                id: dayChip
+                                required property string modelData
+                                readonly property var dm: root.dayMonthFor(modelData)
+                                readonly property color chipColor: root.monthColors[dm.month]
+                                readonly property bool isHl: root.highlightKey === (dm.day + ":" + dm.month)
 
-                            Repeater {
-                                model: root.usedDatesList
-                                delegate: RowLayout {
-                                    required property string modelData
-                                    required property int index
-                                    Layout.fillWidth: true
-                                    Layout.topMargin: index === 0 ? 12 : 0
-                                    Layout.bottomMargin: 12
-                                    spacing: 12
+                                radius: 999
+                                color: chipColor
+                                implicitHeight: 30
+                                implicitWidth: chipLabel.implicitWidth + 12 + 6 + 22 + 5
+                                border.width: isHl ? 2.5 : 0
+                                border.color: Style.text
 
-                                    Rectangle {
-                                        width: 34; height: 34; radius: 11
-                                        color: Style.scopeChipBg("nacional")
-                                        Image { anchors.centerIn: parent; source: Style.icon("calendar"); width: 18; height: 18; sourceSize: Qt.size(18, 18) }
+                                // Plain Text + Rectangle instead of nested Buttons: a
+                                // Button's own default padding/inset fought the chip's
+                                // fixed size and made the pill render smaller/squished
+                                // than the design.
+                                Text {
+                                    id: chipLabel
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: root.shortChipLabel(dayChip.modelData)
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: 14
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    TapHandler { onTapped: root.goToDay(dayChip.dm.day, dayChip.dm.month) }
+                                }
+                                Rectangle {
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 5
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 22; height: 22; radius: 999
+                                    color: Qt.rgba(1, 1, 1, 0.28)
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "✕"
+                                        font.pixelSize: 11
+                                        color: "white"
                                     }
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 2
-                                        Text { text: root.shortLabel(modelData); font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Medium; color: Style.text; elide: Text.ElideRight; Layout.fillWidth: true }
-                                        Text { text: root.weekdayLabel(modelData); font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary }
-                                    }
-                                    Rectangle {
-                                        radius: 999
-                                        color: Style.scopeChipBg("nacional")
-                                        implicitWidth: dayTagText.implicitWidth + 18
-                                        implicitHeight: dayTagText.implicitHeight + 12
-                                        Text { id: dayTagText; anchors.centerIn: parent; text: "1 día"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; color: Style.primary }
-                                    }
-                                    Button {
-                                        implicitWidth: 28; implicitHeight: 28
-                                        background: Rectangle { color: "transparent" }
-                                        contentItem: Text { text: "✕"; font.family: Style.fontFamily; font.pixelSize: 14; color: Style.textDisabled; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                        onClicked: root.toggleDate(modelData)
-                                    }
+                                    TapHandler { onTapped: root.toggleDate(dayChip.modelData) }
                                 }
                             }
                         }
@@ -388,6 +498,7 @@ Page {
                         Layout.fillWidth: true
                         active: root.picking
                         visible: active
+                        onLoaded: root.scheduleEnsureVisible(item)
                         sourceComponent: Component {
                             Rectangle {
                                 Layout.fillWidth: true
@@ -421,8 +532,8 @@ Page {
                                         }
                                         Text {
                                             Layout.fillWidth: true
-                                            text: root.months[root.calendarMonth] + " de " + root.year
-                                            font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: Style.text
+                                            text: root.months[root.calendarMonth][0].toUpperCase() + root.months[root.calendarMonth].slice(1) + " de " + root.year
+                                            font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: root.monthColors[root.calendarMonth]
                                             horizontalAlignment: Text.AlignHCenter
                                         }
                                         Button {
@@ -456,8 +567,10 @@ Page {
                                                 delegate: Text {
                                                     required property string modelData
                                                     width: (dayGrid.width - dayGrid.columnSpacing * 6) / 7
+                                                    height: 18
                                                     text: modelData
                                                     horizontalAlignment: Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
                                                     font.family: Style.fontFamily
                                                     font.pixelSize: 10
                                                     color: Style.textSecondary
@@ -476,14 +589,20 @@ Page {
                                                     readonly property var holiday: modelData.day > 0 ? root.holidayForDate(iso) : null
                                                     readonly property bool isWeekend: modelData.day > 0 && [0, 6].indexOf(new Date(root.year, root.calendarMonth, modelData.day).getDay()) !== -1
                                                     readonly property bool isSelected: modelData.day > 0 && root.usedDatesList.indexOf(iso) !== -1
+                                                    readonly property bool isHighlighted: modelData.day > 0 && root.highlightKey === (modelData.day + ":" + root.calendarMonth)
 
                                                     Rectangle {
                                                         anchors.fill: parent
                                                         visible: dayCell.modelData.day > 0
                                                         radius: 10
-                                                        color: dayCell.isSelected ? Style.primary : Style.background
-                                                        border.color: dayCell.isSelected ? Style.primary : "#EFEADF"
-                                                        border.width: 1
+                                                        color: dayCell.isSelected ? root.monthColors[root.calendarMonth]
+                                                               : dayCell.holiday ? root.holidayTintBg(dayCell.holiday.scope)
+                                                               : Style.background
+                                                        border.color: dayCell.isHighlighted ? Style.text
+                                                               : dayCell.isSelected ? root.monthColors[root.calendarMonth]
+                                                               : dayCell.holiday ? root.holidayTintBorder(dayCell.holiday.scope)
+                                                               : "#EFEADF"
+                                                        border.width: dayCell.isHighlighted ? 2.5 : 1
                                                         Text {
                                                             anchors.centerIn: parent
                                                             text: dayCell.modelData.day
@@ -494,21 +613,67 @@ Page {
                                                                    : dayCell.holiday ? root.dotColorFor(dayCell.holiday.scope)
                                                                    : dayCell.isWeekend ? "#B9C2C4" : Style.text
                                                         }
-                                                        Rectangle {
-                                                            visible: dayCell.holiday && !dayCell.isSelected
-                                                            width: 4; height: 4; radius: 2
-                                                            color: dayCell.holiday ? root.dotColorFor(dayCell.holiday.scope) : "transparent"
-                                                            anchors.horizontalCenter: parent.horizontalCenter
-                                                            anchors.bottom: parent.bottom
-                                                            anchors.bottomMargin: 4
-                                                        }
-                                                        TapHandler {
-                                                            onTapped: root.toggleDate(dayCell.iso)
-                                                        }
                                                     }
                                                 }
                                             }
                                         }
+
+                                        // A single MouseArea over the whole grid drives
+                                        // both tap and press-and-drag multi-select: the
+                                        // web version wires onPointerDown/onPointerEnter
+                                        // per cell button, which QML doesn't have a direct
+                                        // equivalent for — one owning MouseArea doing its
+                                        // own cell hit-testing is the standard QML way to
+                                        // get the same "paint across cells" gesture.
+                                        MouseArea {
+                                            id: dragArea
+                                            anchors.fill: dayGrid
+                                            preventStealing: true
+                                            property bool dragAdd: true
+                                            // The grid's row 0 is the weekday-header labels
+                                            // (L M X J...), not the first day-cell row — the
+                                            // day cells start below it. Forgetting this
+                                            // offset misaligned the row math more and more
+                                            // the further down a drag went, so it looked
+                                            // like you couldn't cross into a new row without
+                                            // having "earned" it first.
+                                            readonly property real headerRowHeight: 18 + dayGrid.rowSpacing
+
+                                            function cellDayAt(mx, my) {
+                                                var cellW = (dayGrid.width - dayGrid.columnSpacing * 6) / 7
+                                                var col = Math.floor(mx / (cellW + dayGrid.columnSpacing))
+                                                var row = Math.floor((my - headerRowHeight) / (32 + dayGrid.rowSpacing))
+                                                if (col < 0 || col > 6 || row < 0) return -1
+                                                var idx = row * 7 + col
+                                                var cells = root.calendarCells()
+                                                if (idx < 0 || idx >= cells.length) return -1
+                                                return cells[idx].day
+                                            }
+
+                                            function applyAt(mx, my, decideMode) {
+                                                var day = cellDayAt(mx, my)
+                                                if (day <= 0) return
+                                                var iso = root.isoFor(day, root.calendarMonth)
+                                                var holiday = root.holidayForDate(iso)
+                                                var already = root.usedDatesList.indexOf(iso) !== -1
+                                                if (holiday && !already) return
+                                                if (decideMode) dragArea.dragAdd = !already
+                                                root.setDaySelected(day, root.calendarMonth, dragArea.dragAdd)
+                                            }
+
+                                            onPressed: (mouse) => applyAt(mouse.x, mouse.y, true)
+                                            onPositionChanged: (mouse) => { if (pressed) applyAt(mouse.x, mouse.y, false) }
+                                        }
+                                    }
+
+                                    Text {
+                                        Layout.topMargin: 2
+                                        text: "Mantén pulsado y arrastra para marcar varios días de golpe."
+                                        font.family: Style.fontFamily
+                                        font.pixelSize: 11
+                                        color: "#9AA6AA"
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
                                     }
 
                                     RowLayout {
@@ -521,7 +686,7 @@ Page {
                                         }
                                         RowLayout {
                                             spacing: 5
-                                            Rectangle { width: 7; height: 7; radius: 3.5; color: Style.scopeColor("regional") }
+                                            Rectangle { width: 7; height: 7; radius: 3.5; color: Style.scopeColor("autonomico") }
                                             Text { text: "Autonómico"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                                         }
                                         RowLayout {

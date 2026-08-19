@@ -16,8 +16,8 @@ RowLayout {
     Layout.fillWidth: true
     Layout.leftMargin: Style.mediumMargin
     Layout.rightMargin: Style.mediumMargin
-    Layout.topMargin: 8
-    Layout.bottomMargin: 16
+    Layout.topMargin: 4
+    Layout.bottomMargin: 10
     spacing: 10
 
     Text {
@@ -30,14 +30,22 @@ RowLayout {
     }
     StepIndicator { Layout.fillWidth: true; currentStep: root.step; steps: root.totalSteps }
     Button {
-        implicitHeight: 26
-        background: Rectangle { color: "transparent" }
+        id: linkButton
+        implicitHeight: 34
+        leftPadding: 10
+        rightPadding: 10
+        topPadding: 6
+        bottomPadding: 6
+        background: Rectangle {
+            radius: 999
+            color: linkButton.pressed ? Style.divider : "transparent"
+        }
         contentItem: Text {
             text: root.linkText
             font.family: Style.fontFamily
             font.pixelSize: 12
             font.weight: Font.Medium
-            color: Style.textSecondary
+            color: linkButton.pressed ? Style.text : Style.textSecondary
         }
         onClicked: root.linkClicked()
     }
