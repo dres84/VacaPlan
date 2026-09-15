@@ -107,7 +107,7 @@ QtObject {
             case "autonomico":
             case "regional": return "#FF6B4A"
             case "provincial": return "#3C6E70"
-            case "local": return "#6B7A80"
+            case "local": return "#B8860B"
             case "manual": return "#9A7B4F"
             default: return "#6B7A80"
         }

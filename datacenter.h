@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QJsonObject>
+#include <QJsonArray>
 
 class DataCenter : public QObject
 {
@@ -41,6 +42,21 @@ public:
     // calculation.
     Q_INVOKABLE void addUsedVacationHours(const QString &isoDate, int hours);
     Q_INVOKABLE void removeUsedVacationHours(const QString &isoDate);
+
+    // Day marks: one entry per date, state is "used" | "confirmed" |
+    // "planned". Independent per year (a date's year is taken from its
+    // own ISO string, never mixed with another year's budget).
+    Q_INVOKABLE void setDayMark(const QString &isoDate, const QString &state);
+    Q_INVOKABLE void clearDayMark(const QString &isoDate);
+    Q_INVOKABLE void setDaySent(const QString &isoDate, bool sent);
+    Q_INVOKABLE int dayMarkCount(int year, const QString &state) const;
+    Q_INVOKABLE QJsonArray dayMarksForYear(int year) const;
+
+    // Remembered contact info for the "Enviar planificación" sheet, only
+    // saved when the user checks "Recordar para los próximos envíos".
+    Q_INVOKABLE void setShareContact(const QString &recipientName,
+                                       const QString &recipientEmail,
+                                       const QString &senderEmail);
 
 signals:
     void dataChanged();

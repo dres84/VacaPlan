@@ -124,6 +124,8 @@ Page {
                             spacing: 16
 
                             Button {
+                                opacity: pressed ? 0.6 : 1.0
+                                Behavior on opacity { NumberAnimation { duration: 100 } }
                                 implicitWidth: 46; implicitHeight: 46
                                 background: Rectangle {
                                     radius: 999
@@ -157,6 +159,8 @@ Page {
                             }
 
                             Button {
+                                opacity: pressed ? 0.6 : 1.0
+                                Behavior on opacity { NumberAnimation { duration: 100 } }
                                 implicitWidth: 46; implicitHeight: 46
                                 background: Rectangle {
                                     radius: 999

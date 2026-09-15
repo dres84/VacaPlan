@@ -3,6 +3,8 @@ import QtQuick.Controls
 import Vacaplan 1.0
 
 Button {
+    opacity: pressed ? 0.6 : 1.0
+    Behavior on opacity { NumberAnimation { duration: 100 } }
     id: control
 
     implicitHeight: 44

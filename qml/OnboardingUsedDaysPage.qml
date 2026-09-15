@@ -289,6 +289,8 @@ Page {
                             spacing: 2
 
                             Button {
+                                opacity: pressed ? 0.6 : 1.0
+                                Behavior on opacity { NumberAnimation { duration: 100 } }
                                 implicitHeight: 32
                                 implicitWidth: datesTabText.implicitWidth + 28
                                 background: Rectangle {
@@ -310,6 +312,8 @@ Page {
                                 onClicked: root.mode = "dates"
                             }
                             Button {
+                                opacity: pressed ? 0.6 : 1.0
+                                Behavior on opacity { NumberAnimation { duration: 100 } }
                                 implicitHeight: 32
                                 implicitWidth: countTabText.implicitWidth + 28
                                 background: Rectangle {
@@ -436,7 +440,9 @@ Page {
                                     font.pixelSize: 14
                                     font.weight: Font.Bold
                                     color: "white"
-                                    TapHandler { onTapped: root.goToDay(dayChip.dm.day, dayChip.dm.month) }
+                                    opacity: labelTap.pressed ? 0.6 : 1.0
+                                    Behavior on opacity { NumberAnimation { duration: 100 } }
+                                    TapHandler { id: labelTap; onTapped: root.goToDay(dayChip.dm.day, dayChip.dm.month) }
                                 }
                                 Rectangle {
                                     anchors.right: parent.right
@@ -444,13 +450,15 @@ Page {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: 22; height: 22; radius: 999
                                     color: Qt.rgba(1, 1, 1, 0.28)
+                                    opacity: deleteTap.pressed ? 0.6 : 1.0
+                                    Behavior on opacity { NumberAnimation { duration: 100 } }
                                     Text {
                                         anchors.centerIn: parent
                                         text: "✕"
                                         font.pixelSize: 11
                                         color: "white"
                                     }
-                                    TapHandler { onTapped: root.toggleDate(dayChip.modelData) }
+                                    TapHandler { id: deleteTap; onTapped: root.toggleDate(dayChip.modelData) }
                                 }
                             }
                         }
@@ -525,6 +533,8 @@ Page {
                                         Layout.fillWidth: true
                                         spacing: 8
                                         Button {
+                                            opacity: pressed ? 0.6 : 1.0
+                                            Behavior on opacity { NumberAnimation { duration: 100 } }
                                             implicitWidth: 30; implicitHeight: 30
                                             background: Rectangle { radius: 999; color: Style.background; border.color: Style.divider; border.width: 1 }
                                             contentItem: Image { anchors.centerIn: parent; source: Style.icon("chevron-right"); width: 15; height: 15; sourceSize: Qt.size(15, 15); rotation: 180 }
@@ -537,6 +547,8 @@ Page {
                                             horizontalAlignment: Text.AlignHCenter
                                         }
                                         Button {
+                                            opacity: pressed ? 0.6 : 1.0
+                                            Behavior on opacity { NumberAnimation { duration: 100 } }
                                             implicitWidth: 30; implicitHeight: 30
                                             background: Rectangle { radius: 999; color: Style.background; border.color: Style.divider; border.width: 1 }
                                             contentItem: Image { anchors.centerIn: parent; source: Style.icon("chevron-right"); width: 15; height: 15; sourceSize: Qt.size(15, 15) }
@@ -709,6 +721,8 @@ Page {
                                             onTextEdited: root.dayManual = text
                                         }
                                         Button {
+                                            opacity: pressed ? 0.6 : 1.0
+                                            Behavior on opacity { NumberAnimation { duration: 100 } }
                                             implicitHeight: 40
                                             background: Rectangle { radius: 999; color: Style.primary }
                                             contentItem: Text { text: "Añadir"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -728,6 +742,8 @@ Page {
                     }
 
                     Button {
+                        opacity: pressed ? 0.6 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: 100 } }
                         Layout.fillWidth: true
                         implicitHeight: 50
                         background: Rectangle {
@@ -746,6 +762,8 @@ Page {
                     }
 
                     Button {
+                        opacity: pressed ? 0.6 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: 100 } }
                         Layout.alignment: Qt.AlignLeft
                         Layout.topMargin: 2
                         implicitHeight: 26
@@ -815,6 +833,8 @@ Page {
                                             onTextEdited: root.hoursAmount = text
                                         }
                                         Button {
+                                            opacity: pressed ? 0.6 : 1.0
+                                            Behavior on opacity { NumberAnimation { duration: 100 } }
                                             Layout.fillWidth: true
                                             implicitHeight: 40
                                             background: Rectangle { radius: 999; color: Style.primary }
@@ -855,6 +875,8 @@ Page {
                                                     Text { id: hourTagText; anchors.centerIn: parent; text: modelData.hours + " h"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; color: Style.primary }
                                                 }
                                                 Button {
+                                                    opacity: pressed ? 0.6 : 1.0
+                                                    Behavior on opacity { NumberAnimation { duration: 100 } }
                                                     implicitWidth: 26; implicitHeight: 26
                                                     background: Rectangle { color: "transparent" }
                                                     contentItem: Text { text: "✕"; font.family: Style.fontFamily; font.pixelSize: 13; color: Style.textDisabled; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -901,6 +923,8 @@ Page {
                             spacing: 16
 
                             Button {
+                                opacity: pressed ? 0.6 : 1.0
+                                Behavior on opacity { NumberAnimation { duration: 100 } }
                                 implicitWidth: 46; implicitHeight: 46
                                 background: Rectangle { radius: 999; color: Style.background; border.color: Style.divider; border.width: 1 }
                                 contentItem: Image { anchors.centerIn: parent; source: Style.icon("minus"); width: 20; height: 20; sourceSize: Qt.size(20, 20) }
@@ -913,6 +937,8 @@ Page {
                                 Text { Layout.alignment: Qt.AlignHCenter; text: "de " + root.totalDays + " días"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; color: Style.textSecondary }
                             }
                             Button {
+                                opacity: pressed ? 0.6 : 1.0
+                                Behavior on opacity { NumberAnimation { duration: 100 } }
                                 implicitWidth: 46; implicitHeight: 46
                                 background: Rectangle { radius: 999; color: Style.background; border.color: Style.divider; border.width: 1 }
                                 contentItem: Image { anchors.centerIn: parent; source: Style.icon("plus"); width: 20; height: 20; sourceSize: Qt.size(20, 20) }

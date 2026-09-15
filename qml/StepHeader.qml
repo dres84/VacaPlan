@@ -30,6 +30,8 @@ RowLayout {
     }
     StepIndicator { Layout.fillWidth: true; currentStep: root.step; steps: root.totalSteps }
     Button {
+        opacity: pressed ? 0.6 : 1.0
+        Behavior on opacity { NumberAnimation { duration: 100 } }
         id: linkButton
         implicitHeight: 34
         leftPadding: 10

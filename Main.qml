@@ -18,6 +18,14 @@ ApplicationWindow {
         id: holidayProvider
     }
 
+    Clipboard {
+        id: clipboard
+    }
+
+    Exporter {
+        id: exporter
+    }
+
     StackView {
         id: stackView
         anchors.fill: parent
@@ -36,6 +44,15 @@ ApplicationWindow {
             stackView.push(Qt.resolvedUrl("qml/HomePage.qml"), {
                 dataCenter: dataCenter,
                 holidayProvider: holidayProvider
+            })
+        }
+
+        function goToPlanner() {
+            stackView.push(Qt.resolvedUrl("qml/PlanCalendarPage.qml"), {
+                dataCenter: dataCenter,
+                holidayProvider: holidayProvider,
+                clipboard: clipboard,
+                exporter: exporter
             })
         }
     }
@@ -63,11 +80,15 @@ ApplicationWindow {
         function onRestartOnboarding() {
             stackView.goToLocationPage()
         }
+        function onOpenPlanner() {
+            stackView.goToPlanner()
+        }
     }
 
     Component.onCompleted: {
         if (dataCenter.onboardingCompleted()) {
             stackView.goToHome()
+            stackView.goToPlanner()
         } else {
             stackView.goToLocationPage()
         }

@@ -47,9 +47,13 @@ qt_add_qml_module(appVacaplan
         qml/OnboardingVacationDaysPage.qml
         qml/OnboardingUsedDaysPage.qml
         qml/HomePage.qml
+        qml/PlanCalendarPage.qml
+        qml/ShareModal.qml
     SOURCES
         datacenter.h datacenter.cpp
         holidayprovider.h holidayprovider.cpp
+        clipboard.h clipboard.cpp
+        exporter.h exporter.cpp
 )
 
 qt_add_resources(appVacaplan "icons"
@@ -61,6 +65,8 @@ qt_add_resources(appVacaplan "icons"
         icons/calendar-locked.svg
         icons/calendar.svg
         icons/check-circle.svg
+        icons/check.svg
+        icons/check-white.svg
         icons/chevron-left.svg
         icons/chevron-right.svg
         icons/chevron-right-white.svg
@@ -72,13 +78,18 @@ qt_add_resources(appVacaplan "icons"
         icons/globe.svg
         icons/globe-active.svg
         icons/location-pin.svg
+        icons/mail.svg
+        icons/mail-teal.svg
         icons/minus.svg
         icons/minus-white.svg
         icons/palm-tree.svg
         icons/plane.svg
         icons/plus.svg
         icons/plus-white.svg
+        icons/reset-accent.svg
         icons/rotate-ccw.svg
+        icons/share.svg
+        icons/share-white.svg
         icons/suitcase.svg
         icons/sun.svg
         icons/sun-white.svg

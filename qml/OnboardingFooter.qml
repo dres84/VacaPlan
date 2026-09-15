@@ -37,6 +37,8 @@ Rectangle {
         visible: active
         sourceComponent: Component {
             Button {
+                opacity: pressed ? 0.6 : 1.0
+                Behavior on opacity { NumberAnimation { duration: 100 } }
                 width: loader.width
                 implicitHeight: 54
                 property bool revealed: false

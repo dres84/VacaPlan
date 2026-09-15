@@ -488,6 +488,8 @@ Page {
                     spacing: 12
 
                     Button {
+                        opacity: pressed ? 0.6 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: 100 } }
                         Layout.fillWidth: true
                         implicitHeight: 72
                         background: Rectangle {
@@ -511,6 +513,8 @@ Page {
                         onClicked: root.pickCountry("ES")
                     }
                     Button {
+                        opacity: pressed ? 0.6 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: 100 } }
                         Layout.fillWidth: true
                         implicitHeight: 72
                         background: Rectangle {
@@ -652,6 +656,8 @@ Page {
                             onLoaded: root.scheduleEnsureVisible(item)
                             sourceComponent: Component {
                                 Button {
+                                    opacity: pressed ? 0.6 : 1.0
+                                    Behavior on opacity { NumberAnimation { duration: 100 } }
                                     id: unknownBtn
                                     Layout.fillWidth: true
                                     Layout.bottomMargin: 12
@@ -716,6 +722,8 @@ Page {
                 onLoaded: root.scheduleEnsureVisible(item)
                 sourceComponent: Component {
                     Button {
+                        opacity: pressed ? 0.6 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: 100 } }
                         Layout.fillWidth: true
                         implicitHeight: 54
                         property bool revealed: false

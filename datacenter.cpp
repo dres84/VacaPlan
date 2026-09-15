@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QDir>
 #include <QDebug>
+#include <algorithm>
 
 DataCenter::DataCenter(QObject *parent) : QObject(parent) {
     load();
@@ -34,7 +35,11 @@ void DataCenter::loadEmptyData() {
         {"usedVacationMode", "dates"},
         {"usedVacationCount", 0},
         {"usedVacationDates", QJsonArray{}},
-        {"usedVacationHourEntries", QJsonArray{}}
+        {"usedVacationHourEntries", QJsonArray{}},
+        {"dayMarks", QJsonArray{}},
+        {"shareRecipientName", ""},
+        {"shareRecipientEmail", ""},
+        {"shareSenderEmail", ""}
     };
 }
 
@@ -53,6 +58,24 @@ void DataCenter::load() {
     } else {
         loadEmptyData();
     }
+
+    // Migrate older profiles (from before day-state tracking existed):
+    // seed dayMarks from the flat used-dates list, once.
+    if (!m_data.contains("dayMarks")) {
+        QJsonArray marks;
+        if (m_data.value("usedVacationMode").toString() == "dates") {
+            const QJsonArray dates = m_data.value("usedVacationDates").toArray();
+            for (const auto &v : dates) {
+                marks.append(QJsonObject{
+                    {"date", v.toString()}, {"state", "used"}, {"sent", false}
+                });
+            }
+        }
+        m_data["dayMarks"] = marks;
+    }
+    if (!m_data.contains("shareRecipientName")) m_data["shareRecipientName"] = "";
+    if (!m_data.contains("shareRecipientEmail")) m_data["shareRecipientEmail"] = "";
+    if (!m_data.contains("shareSenderEmail")) m_data["shareSenderEmail"] = "";
 
     save();
     emit dataChanged();
@@ -79,7 +102,7 @@ void DataCenter::completeOnboarding() {
 }
 
 void DataCenter::resetOnboarding() {
-    m_data["onboardingCompleted"] = false;
+    loadEmptyData();
     save();
     emit dataChanged();
 }
@@ -168,4 +191,89 @@ void DataCenter::removeUsedVacationHours(const QString &isoDate) {
     m_data["usedVacationHourEntries"] = filtered;
     save();
     emit dataChanged();
+}
+
+void DataCenter::setDayMark(const QString &isoDate, const QString &state) {
+    QJsonArray marks = m_data["dayMarks"].toArray();
+    QJsonArray filtered;
+    for (const auto &v : marks) {
+        if (v.toObject().value("date").toString() != isoDate) {
+            filtered.append(v);
+        }
+    }
+    filtered.append(QJsonObject{{"date", isoDate}, {"state", state}, {"sent", false}});
+    m_data["dayMarks"] = filtered;
+    save();
+    emit dataChanged();
+}
+
+void DataCenter::clearDayMark(const QString &isoDate) {
+    QJsonArray marks = m_data["dayMarks"].toArray();
+    QJsonArray filtered;
+    for (const auto &v : marks) {
+        if (v.toObject().value("date").toString() != isoDate) {
+            filtered.append(v);
+        }
+    }
+    m_data["dayMarks"] = filtered;
+    save();
+    emit dataChanged();
+}
+
+void DataCenter::setDaySent(const QString &isoDate, bool sent) {
+    QJsonArray marks = m_data["dayMarks"].toArray();
+    QJsonArray updated;
+    for (const auto &v : marks) {
+        QJsonObject obj = v.toObject();
+        if (obj.value("date").toString() == isoDate) {
+            obj["sent"] = sent;
+        }
+        updated.append(obj);
+    }
+    m_data["dayMarks"] = updated;
+    save();
+    emit dataChanged();
+}
+
+int DataCenter::dayMarkCount(int year, const QString &state) const {
+    const QString prefix = QString::number(year) + "-";
+    const QJsonArray marks = m_data.value("dayMarks").toArray();
+    int count = 0;
+    for (const auto &v : marks) {
+        QJsonObject obj = v.toObject();
+        if (obj.value("date").toString().startsWith(prefix)
+            && obj.value("state").toString() == state) {
+            count++;
+        }
+    }
+    return count;
+}
+
+void DataCenter::setShareContact(const QString &recipientName,
+                                   const QString &recipientEmail,
+                                   const QString &senderEmail) {
+    m_data["shareRecipientName"] = recipientName;
+    m_data["shareRecipientEmail"] = recipientEmail;
+    m_data["shareSenderEmail"] = senderEmail;
+    save();
+    emit dataChanged();
+}
+
+QJsonArray DataCenter::dayMarksForYear(int year) const {
+    const QString prefix = QString::number(year) + "-";
+    const QJsonArray marks = m_data.value("dayMarks").toArray();
+    QList<QJsonValue> filtered;
+    for (const auto &v : marks) {
+        if (v.toObject().value("date").toString().startsWith(prefix)) {
+            filtered.append(v);
+        }
+    }
+    std::sort(filtered.begin(), filtered.end(), [](const QJsonValue &a, const QJsonValue &b) {
+        return a.toObject().value("date").toString() < b.toObject().value("date").toString();
+    });
+    QJsonArray result;
+    for (const auto &v : filtered) {
+        result.append(v);
+    }
+    return result;
 }
