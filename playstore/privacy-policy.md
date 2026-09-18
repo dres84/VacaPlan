@@ -47,4 +47,4 @@ Si esta política cambia, actualizaremos la fecha al principio de este documento
 
 ## Contacto
 
-Si tienes dudas sobre esta política, escríbenos a: **dres84@gmail.com**
+Si tienes dudas sobre esta política, escríbenos a: **appsbydresoft@gmail.com**
