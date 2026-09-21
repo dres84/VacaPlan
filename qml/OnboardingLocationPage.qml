@@ -9,7 +9,14 @@ Page {
     property var holidayProvider
     signal locationConfirmed()
 
+    property bool settingsOpen: false
+
     background: Rectangle { color: Style.background }
+
+    // Reset scroll position whenever this page becomes the active StackView
+    // item — otherwise coming back via "Atrás" lands mid-scroll instead of
+    // at the top.
+    StackView.onActivated: scrollView.contentY = 0
 
     readonly property int currentYear: new Date().getFullYear()
     readonly property int nextYear: currentYear + 1
@@ -219,9 +226,9 @@ Page {
     readonly property string muniHint: {
         var q = root.muniQuery.trim()
         if (root.municipios.length === 0) return ""
-        if (!q) return root.municipios.length + " municipios en la provincia · escribe para buscar los más pequeños"
-        if (root.muniMatches.length === 0) return "Ningún municipio coincide con «" + q + "». Marca la casilla de abajo y usaremos solo los festivos autonómicos."
-        if (root.muniMatches.length > 10) return "Mostrando 10 de " + root.muniMatches.length + " · sigue escribiendo para afinar"
+        if (!q) return qsTr("%1 municipios en la provincia · escribe para buscar los más pequeños").arg(root.municipios.length)
+        if (root.muniMatches.length === 0) return qsTr("Ningún municipio coincide con «%1». Marca la casilla de abajo y usaremos solo los festivos autonómicos.").arg(q)
+        if (root.muniMatches.length > 10) return qsTr("Mostrando 10 de %1 · sigue escribiendo para afinar").arg(root.muniMatches.length)
         return ""
     }
 
@@ -413,8 +420,9 @@ Page {
 
         StepHeader {
             step: 1
-            linkText: "Reiniciar"
+            linkText: qsTr("Reiniciar")
             onLinkClicked: root.resetLocationState()
+            onSettingsClicked: root.settingsOpen = true
         }
 
     Flickable {
@@ -451,7 +459,7 @@ Page {
 
                 Image { source: Style.icon("location-pin"); width: 34; height: 34; sourceSize: Qt.size(34, 34) }
                 Text {
-                    text: "¿Dónde vives?"
+                    text: qsTr("¿Dónde vives?")
                     font.family: Style.fontFamily
                     font.pixelSize: 30
                     font.weight: Font.Bold
@@ -459,7 +467,7 @@ Page {
                     color: Style.text
                 }
                 Text {
-                    text: "Con tu ubicación cargamos los festivos nacionales, autonómicos, provinciales y locales que te corresponden. Puedes cambiarla cuando quieras."
+                    text: qsTr("Con tu ubicación cargamos los festivos nacionales, autonómicos, provinciales y locales que te corresponden. Puedes cambiarla cuando quieras.")
                     font.family: Style.fontFamily
                     font.pixelSize: 14
                     color: Style.textSecondary
@@ -476,7 +484,7 @@ Page {
                 spacing: 10
 
                 Text {
-                    text: "PAÍS"
+                    text: qsTr("PAÍS")
                     font.family: Style.fontFamily
                     font.pixelSize: 11
                     font.weight: Font.Medium
@@ -494,8 +502,8 @@ Page {
                         implicitHeight: 72
                         background: Rectangle {
                             radius: 22
-                            color: root.country === "ES" ? "#E6F0EF" : Style.surface
-                            border.color: root.country === "ES" ? Style.primary : Style.divider
+                            color: root.country === "ES" ? Style.withAlpha(Style.primary, 0.12) : Style.surface
+                            border.color: root.country === "ES" ? Style.primaryBorder : Style.divider
                             border.width: root.country === "ES" ? 1.5 : 1
                         }
                         contentItem: RowLayout {
@@ -503,11 +511,11 @@ Page {
                             anchors.left: parent.left; anchors.leftMargin: 18
                             Image { source: Style.icon("flag-spain"); width: 34; height: 23; sourceSize: Qt.size(34, 23) }
                             Text {
-                                text: "España"
+                                text: qsTr("España")
                                 font.family: Style.fontFamily
                                 font.pixelSize: 15
                                 font.weight: Font.Bold
-                                color: root.country === "ES" ? Style.primary : Style.textSecondary
+                                color: root.country === "ES" ? Style.primaryInk : Style.textSecondary
                             }
                         }
                         onClicked: root.pickCountry("ES")
@@ -519,8 +527,8 @@ Page {
                         implicitHeight: 72
                         background: Rectangle {
                             radius: 22
-                            color: root.country === "OTHER" ? "#E6F0EF" : Style.surface
-                            border.color: root.country === "OTHER" ? Style.primary : Style.divider
+                            color: root.country === "OTHER" ? Style.withAlpha(Style.primary, 0.12) : Style.surface
+                            border.color: root.country === "OTHER" ? Style.primaryBorder : Style.divider
                             border.width: root.country === "OTHER" ? 1.5 : 1
                         }
                         contentItem: RowLayout {
@@ -531,11 +539,11 @@ Page {
                                 width: 30; height: 20; sourceSize: Qt.size(30, 20)
                             }
                             Text {
-                                text: "Otro país"
+                                text: qsTr("Otro país")
                                 font.family: Style.fontFamily
                                 font.pixelSize: 15
                                 font.weight: Font.Bold
-                                color: root.country === "OTHER" ? Style.primary : Style.textSecondary
+                                color: root.country === "OTHER" ? Style.primaryInk : Style.textSecondary
                             }
                         }
                         onClicked: root.pickCountry("OTHER")
@@ -576,9 +584,9 @@ Page {
                         AccordionSelect {
                             id: comunidadField
                             Layout.fillWidth: true
-                            label: "COMUNIDAD AUTÓNOMA"
+                            label: qsTr("COMUNIDAD AUTÓNOMA")
                             value: root.ccaaName
-                            placeholder: "Elige tu comunidad"
+                            placeholder: qsTr("Elige tu comunidad")
                             options: root.comunidades.map(function (c) { return c.name })
                             open: root.open === "com"
                             onToggled: root.open = (root.open === "com" ? "" : "com")
@@ -602,9 +610,9 @@ Page {
                                     Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutQuint } }
                                     Component.onCompleted: revealed = true
 
-                                    label: "PROVINCIA"
+                                    label: qsTr("PROVINCIA")
                                     value: root.provinciaName
-                                    placeholder: "Elige tu provincia"
+                                    placeholder: qsTr("Elige tu provincia")
                                     options: root.provincias.map(function (p) { return p.name })
                                     open: root.open === "prov"
                                     onToggled: root.open = (root.open === "prov" ? "" : "prov")
@@ -631,12 +639,12 @@ Page {
                                     Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutQuint } }
                                     Component.onCompleted: revealed = true
 
-                                    label: "MUNICIPIO"
+                                    label: qsTr("MUNICIPIO")
                                     value: root.municipioName
-                                    placeholder: "Busca tu municipio"
+                                    placeholder: qsTr("Busca tu municipio")
                                     searchable: true
                                     query: root.muniQuery
-                                    searchPlaceholder: "Busca tu municipio"
+                                    searchPlaceholder: qsTr("Busca tu municipio")
                                     options: root.muniOptionNames
                                     hintText: root.muniHint
                                     open: root.open === "muni"
@@ -672,8 +680,8 @@ Page {
 
                                     background: Rectangle {
                                         radius: 18
-                                        color: root.skipMunicipio ? "#E6F0EF" : Style.surface
-                                        border.color: root.skipMunicipio ? Style.primary : Style.divider
+                                        color: root.skipMunicipio ? Style.withAlpha(Style.primary, 0.12) : Style.surface
+                                        border.color: root.skipMunicipio ? Style.primaryBorder : Style.divider
                                         border.width: root.skipMunicipio ? 1.5 : 1
                                     }
                                     contentItem: RowLayout {
@@ -684,7 +692,7 @@ Page {
                                         Rectangle {
                                             width: 22; height: 22; radius: 7
                                             color: root.skipMunicipio ? Style.primary : Style.background
-                                            border.color: root.skipMunicipio ? Style.primary : "#D5CEC0"
+                                            border.color: root.skipMunicipio ? Style.primaryBorder : Style.divider
                                             border.width: 1.5
                                             Item {
                                                 anchors.centerIn: parent
@@ -696,7 +704,7 @@ Page {
                                         }
                                         Text {
                                             Layout.fillWidth: true
-                                            text: "No sé mi municipio, usar solo festivos autonómicos"
+                                            text: qsTr("No sé mi municipio, usar solo festivos autonómicos")
                                             font.family: Style.fontFamily
                                             font.pixelSize: 13
                                             color: Style.text
@@ -735,7 +743,7 @@ Page {
 
                         background: Rectangle { radius: 999; color: Style.accent }
                         contentItem: Text {
-                            text: "Buscar festivos"
+                            text: qsTr("Buscar festivos")
                             font.family: Style.fontFamily
                             font.pixelSize: 15
                             font.weight: Font.Bold
@@ -776,7 +784,7 @@ Page {
                             spacing: 11
                             BusyIndicator { running: true; implicitWidth: 20; implicitHeight: 20 }
                             Text {
-                                text: "Consultando festivos oficiales…"
+                                text: qsTr("Consultando festivos oficiales…")
                                 font.family: Style.fontFamily
                                 font.pixelSize: 14
                                 font.weight: Font.Medium
@@ -853,7 +861,7 @@ Page {
                                 Rectangle {
                                     Layout.alignment: Qt.AlignTop
                                     radius: 999
-                                    color: "#F4EFE5"
+                                    color: Style.weekend
                                     implicitWidth: yearChipCurrent.implicitWidth + 18
                                     implicitHeight: yearChipCurrent.implicitHeight + 12
                                     Text {
@@ -894,9 +902,8 @@ Page {
                                     Image { source: Style.icon("alert-circle"); width: 16; height: 16; sourceSize: Qt.size(16, 16) }
                                     Text {
                                         Layout.fillWidth: true
-                                        text: "España tiene 14 festivos al año y solo hemos encontrado " + root.countCurrent
-                                              + " para " + root.currentYear + " — el calendario oficial casi nunca trae los locales."
-                                              + " Añade los que falten:"
+                                        text: qsTr("España tiene 14 festivos al año y solo hemos encontrado %1 para %2 — el calendario oficial casi nunca trae los locales. Añade los que falten:")
+                                              .arg(root.countCurrent).arg(root.currentYear)
                                         font.family: Style.fontFamily
                                         font.pixelSize: 13
                                         color: Style.textSecondary
@@ -986,7 +993,7 @@ Page {
                                 Rectangle {
                                     Layout.alignment: Qt.AlignTop
                                     radius: 999
-                                    color: "#F4EFE5"
+                                    color: Style.weekend
                                     implicitWidth: yearChipNext.implicitWidth + 18
                                     implicitHeight: yearChipNext.implicitHeight + 12
                                     Text {
@@ -1013,7 +1020,7 @@ Page {
     }
 
     OnboardingFooter {
-        text: "Continuar"
+        text: qsTr("Continuar")
         baseColor: Style.primary
         buttonEnabled: root.canContinue
         onClicked: {
@@ -1023,5 +1030,11 @@ Page {
             root.locationConfirmed()
         }
     }
+    }
+
+    SettingsModal {
+        anchors.fill: parent
+        open: root.settingsOpen
+        onClosed: root.settingsOpen = false
     }
 }

@@ -15,9 +15,9 @@ ColumnLayout {
     property var holidayProvider
     signal saved()
 
-    readonly property var months: ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-    readonly property var weekdays: ["L", "M", "X", "J", "V", "S", "D"]
+    readonly property var months: [qsTr("enero"), qsTr("febrero"), qsTr("marzo"), qsTr("abril"), qsTr("mayo"), qsTr("junio"),
+        qsTr("julio"), qsTr("agosto"), qsTr("septiembre"), qsTr("octubre"), qsTr("noviembre"), qsTr("diciembre")]
+    readonly property var weekdays: [qsTr("L"), qsTr("M"), qsTr("X"), qsTr("J"), qsTr("V"), qsTr("S"), qsTr("D")]
 
     spacing: Style.smallSpace
 
@@ -33,7 +33,7 @@ ColumnLayout {
     }
     function fullLabel(iso) {
         var p = iso.split("-")
-        return parseInt(p[2]) + " de " + root.months[parseInt(p[1]) - 1]
+        return qsTr("%1 de %2", "day of month").arg(parseInt(p[2])).arg(root.months[parseInt(p[1]) - 1])
     }
     function holidayForDate(iso) {
         for (var i = 0; i < root.knownHolidays.length; i++) {
@@ -48,12 +48,10 @@ ColumnLayout {
         return -1
     }
     function holidayTintBg(scope) {
-        var c = Qt.color(Style.scopeColor(scope))
-        return Qt.rgba(c.r, c.g, c.b, 0.15)
+        return Style.withAlpha(Style.scopeColor(scope), 0.16863) // fill + 2b (17%)
     }
     function holidayTintBorder(scope) {
-        var c = Qt.color(Style.scopeColor(scope))
-        return Qt.rgba(c.r, c.g, c.b, 0.33)
+        return Style.withAlpha(Style.scopeColor(scope), 0.34902) // fill + 59 (35%)
     }
 
     function toggleDay(day, month) {
@@ -61,7 +59,7 @@ ColumnLayout {
         if (root.holidayForDate(iso)) return // already a known holiday, nothing to add
         var idx = root.entryIndexFor(iso)
         if (idx !== -1) entriesModel.remove(idx)
-        else entriesModel.append({ date: iso, name: "Festivo local" })
+        else entriesModel.append({ date: iso, name: qsTr("Festivo local") })
     }
 
     function calendarCells() {
@@ -75,7 +73,7 @@ ColumnLayout {
     }
 
     Text {
-        text: "Festivos de " + root.year
+        text: qsTr("Festivos de %1").arg(root.year)
         font.family: Style.fontFamily
         font.pixelSize: Style.semi
         font.weight: Font.Bold
@@ -83,7 +81,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Toca un día para añadirlo. Los festivos ya conocidos y los fines de semana se marcan para que no se te dupliquen."
+        text: qsTr("Toca un día para añadirlo. Los festivos ya conocidos y los fines de semana se marcan para que no se te dupliquen.")
         font.family: Style.fontFamily
         font.pixelSize: 12
         color: Style.textSecondary
@@ -125,7 +123,7 @@ ColumnLayout {
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: root.months[root.pickerMonth] + " de " + root.year
+                    text: qsTr("%1 de %2", "month of year").arg(root.months[root.pickerMonth]).arg(root.year)
                     font.family: Style.fontFamily
                     font.pixelSize: Style.semi
                     font.weight: Font.Bold
@@ -196,7 +194,7 @@ ColumnLayout {
                                 radius: 9
                                 color: dayCell.isAdded ? Style.primary
                                        : dayCell.holiday ? root.holidayTintBg(dayCell.holiday.scope)
-                                       : dayCell.isWeekend ? "#F4EFE5"
+                                       : dayCell.isWeekend ? Style.weekend
                                        : Style.surface
                                 border.color: dayCell.isAdded ? Style.primary
                                        : dayCell.holiday ? root.holidayTintBorder(dayCell.holiday.scope)
@@ -212,8 +210,8 @@ ColumnLayout {
                                     font.pixelSize: 12
                                     font.weight: (dayCell.isAdded || dayCell.holiday) ? Font.Bold : Font.Medium
                                     color: dayCell.isAdded ? "white"
-                                           : dayCell.holiday ? Style.scopeColor(dayCell.holiday.scope)
-                                           : dayCell.isWeekend ? "#B9C2C4" : Style.text
+                                           : dayCell.holiday ? Style.scopeInk(dayCell.holiday.scope)
+                                           : dayCell.isWeekend ? Style.textGhost : Style.text
                                 }
                                 TapHandler {
                                     id: dayTap
@@ -233,17 +231,17 @@ ColumnLayout {
                 RowLayout {
                     spacing: 5
                     Rectangle { width: 8; height: 8; radius: 4; color: Style.primary }
-                    Text { text: "Añadido"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
+                    Text { text: qsTr("Añadido"); font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                 }
                 RowLayout {
                     spacing: 5
                     Rectangle { width: 8; height: 8; radius: 4; color: Style.scopeColor("nacional") }
-                    Text { text: "Ya conocido"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
+                    Text { text: qsTr("Ya conocido"); font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                 }
                 RowLayout {
                     spacing: 5
-                    Rectangle { width: 8; height: 8; radius: 4; color: "#B9C2C4" }
-                    Text { text: "Fin de semana"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
+                    Rectangle { width: 8; height: 8; radius: 4; color: Style.textGhost }
+                    Text { text: qsTr("Fin de semana"); font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                 }
                 Item { Layout.fillWidth: true }
             }
@@ -278,8 +276,16 @@ ColumnLayout {
                 TextField {
                     Layout.fillWidth: true
                     text: entryRow.name
-                    placeholderText: "Nombre del festivo"
+                    placeholderText: qsTr("Nombre del festivo")
+                    placeholderTextColor: Style.textFaint
+                    color: Style.text
                     font.family: Style.fontFamily
+                    background: Rectangle {
+                        radius: Style.mediumRadius
+                        color: Style.sunken
+                        border.color: Style.divider
+                        border.width: 1
+                    }
                     onTextEdited: entriesModel.setProperty(entryRow.index, "name", text)
                 }
                 Button {
@@ -296,7 +302,7 @@ ColumnLayout {
 
     Text {
         visible: entriesModel.count === 0
-        text: "Añade al menos un festivo local tocando un día en el calendario de arriba."
+        text: qsTr("Añade al menos un festivo local tocando un día en el calendario de arriba.")
         color: Style.textSecondary
         font.family: Style.fontFamily
         font.pixelSize: Style.caption
@@ -314,7 +320,7 @@ ColumnLayout {
         background: Rectangle { radius: 999; color: parent.enabled ? Style.primary : Style.primaryDisabled }
         contentItem: Text {
             id: saveLabel
-            text: "Guardar " + root.year
+            text: qsTr("Guardar %1").arg(root.year)
             font.family: Style.fontFamily
             font.pixelSize: Style.caption
             font.weight: Font.Bold
@@ -326,7 +332,7 @@ ColumnLayout {
             var newEntries = []
             for (var i = 0; i < entriesModel.count; i++) {
                 var item = entriesModel.get(i)
-                newEntries.push({ date: item.date, name: item.name || "Festivo local", scope: "manual" })
+                newEntries.push({ date: item.date, name: item.name || qsTr("Festivo local"), scope: "manual" })
             }
             // Merged with whatever was already cached (official holidays
             // already fetched, or previous manual entries) instead of

@@ -88,7 +88,6 @@ ApplicationWindow {
     Component.onCompleted: {
         if (dataCenter.onboardingCompleted()) {
             stackView.goToHome()
-            stackView.goToPlanner()
         } else {
             stackView.goToLocationPage()
         }

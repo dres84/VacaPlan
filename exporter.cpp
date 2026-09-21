@@ -21,14 +21,14 @@ QString Exporter::downloadPath(const QString &filename) const {
 }
 
 QString Exporter::translateEstado(const QString &estado) {
-    if (estado == "planned") return "planeado";
-    if (estado == "confirmed") return "confirmado";
-    if (estado == "used") return "gastado";
+    if (estado == "planned") return tr("planeado");
+    if (estado == "confirmed") return tr("confirmado");
+    if (estado == "used") return tr("gastado");
     return estado;
 }
 
 QString Exporter::translateAmbito(const QString &ambito) {
-    if (ambito == "personal") return "vacaciones";
+    if (ambito == "personal") return tr("vacaciones");
     return ambito;
 }
 
@@ -44,7 +44,7 @@ QString Exporter::exportCsv(const QVariantList &rows, const QVariantList &holida
 
     QTextStream out(&file);
     out.setEncoding(QStringConverter::Utf8);
-    out << "fecha,estado,ambito\n";
+    out << tr("fecha") << "," << tr("estado") << "," << tr("ambito") << "\n";
     for (const QVariant &v : rows) {
         QVariantMap row = v.toMap();
         out << row.value("date").toString() << ","
@@ -54,7 +54,7 @@ QString Exporter::exportCsv(const QVariantList &rows, const QVariantList &holida
     for (const QVariant &v : holidays) {
         QVariantMap row = v.toMap();
         out << row.value("date").toString() << ","
-            << "festivo" << ","
+            << tr("festivo") << ","
             << row.value("scope").toString() << "\n";
     }
     file.close();
@@ -93,7 +93,7 @@ QString Exporter::exportIcs(const QVariantList &rows, int year) {
         out << "DTSTAMP:" << stamp << "\r\n";
         out << "DTSTART;VALUE=DATE:" << startCompact << "\r\n";
         out << "DTEND;VALUE=DATE:" << endCompact << "\r\n";
-        out << "SUMMARY:Vacaciones (Vacaplan)\r\n";
+        out << "SUMMARY:" << tr("Vacaciones (Vacaplan)") << "\r\n";
         out << "STATUS:" << status << "\r\n";
         out << "END:VEVENT\r\n";
     }
@@ -119,7 +119,7 @@ QString Exporter::exportPdf(const QVariantList &rows, const QVariantMap &summary
 
     QFont titleFont("Helvetica", 18, QFont::Bold);
     painter.setFont(titleFont);
-    painter.drawText(margin, y, QString("Vacaplan — Planificación %1").arg(year));
+    painter.drawText(margin, y, tr("Vacaplan — Planificación %1").arg(year));
     y += 40;
 
     const QString location = summary.value("location").toString();
@@ -133,7 +133,7 @@ QString Exporter::exportPdf(const QVariantList &rows, const QVariantMap &summary
 
     QFont breakdownFont("Helvetica", 11);
     painter.setFont(breakdownFont);
-    const QString breakdown = QString("Gastados: %1   Confirmados: %2   Planeados: %3   Disponibles: %4")
+    const QString breakdown = tr("Gastados: %1   Confirmados: %2   Planeados: %3   Disponibles: %4")
         .arg(summary.value("used").toInt())
         .arg(summary.value("confirmed").toInt())
         .arg(summary.value("planned").toInt())
@@ -141,12 +141,12 @@ QString Exporter::exportPdf(const QVariantList &rows, const QVariantMap &summary
     painter.drawText(margin, y, breakdown);
     y += 50;
 
-    static const char *months[] = {"enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"};
+    const QString months[] = {tr("enero"), tr("febrero"), tr("marzo"), tr("abril"), tr("mayo"), tr("junio"),
+        tr("julio"), tr("agosto"), tr("septiembre"), tr("octubre"), tr("noviembre"), tr("diciembre")};
 
     QFont sectionFont("Helvetica", 13, QFont::Bold);
     painter.setFont(sectionFont);
-    painter.drawText(margin, y, "Días planeados");
+    painter.drawText(margin, y, tr("Días planeados"));
     y += 40;
 
     QFont rowFont("Helvetica", 11);
@@ -155,7 +155,7 @@ QString Exporter::exportPdf(const QVariantList &rows, const QVariantMap &summary
         QVariantMap row = v.toMap();
         const QDate d = QDate::fromString(row.value("date").toString(), "yyyy-MM-dd");
         const QString longDate = d.isValid()
-            ? QString("%1 de %2 de %3").arg(d.day()).arg(months[d.month() - 1]).arg(d.year())
+            ? tr("%1 de %2 de %3").arg(d.day()).arg(months[d.month() - 1]).arg(d.year())
             : row.value("date").toString();
         const QString line = QString("%1  (%2)").arg(longDate, translateEstado(row.value("estado").toString()));
         painter.drawText(margin, y, line);

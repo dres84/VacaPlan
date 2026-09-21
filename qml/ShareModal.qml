@@ -51,14 +51,15 @@ Item {
     property string bodyOverride: ""
     property string exportFormat: "pdf" // "pdf" | "csv" | "ics"
     property string copyFeedback: ""
+    property bool copySucceeded: false
 
-    readonly property var monthAbbrev: ["ene", "feb", "mar", "abr", "may", "jun",
-        "jul", "ago", "sep", "oct", "nov", "dic"]
+    readonly property var monthAbbrev: [qsTr("ene"), qsTr("feb"), qsTr("mar"), qsTr("abr"), qsTr("may"), qsTr("jun"),
+        qsTr("jul"), qsTr("ago"), qsTr("sep"), qsTr("oct"), qsTr("nov"), qsTr("dic")]
 
     Timer {
         id: copyFeedbackTimer
         interval: 1800
-        onTriggered: root.copyFeedback = ""
+        onTriggered: { root.copyFeedback = ""; root.copySucceeded = false }
     }
 
     onOpenChanged: {
@@ -91,7 +92,7 @@ Item {
     }
     function fullDateLabel(iso) {
         var p = iso.split("-")
-        return parseInt(p[2]) + " de " + (root.months[parseInt(p[1]) - 1] || "") + " de " + p[0]
+        return qsTr("%1 de %2 de %3").arg(parseInt(p[2])).arg(root.months[parseInt(p[1]) - 1] || "").arg(p[0])
     }
     function shortDateLabel(iso) {
         var p = iso.split("-")
@@ -102,24 +103,25 @@ Item {
     }
     function defaultSubject() {
         var n = root.plannedRows.length
-        return "Solicitud de vacaciones · " + n + (n === 1 ? " día" : " días")
+        return n === 1 ? qsTr("Solicitud de vacaciones · %1 día").arg(n) : qsTr("Solicitud de vacaciones · %1 días").arg(n)
     }
     function defaultBody() {
         var name = root.firstName(root.recipientName)
         var lines = []
-        lines.push(name ? ("Hola " + name + ",") : "Hola,")
+        lines.push(name ? qsTr("Hola %1,").arg(name) : qsTr("Hola,"))
         lines.push("")
-        lines.push("Te paso los días de vacaciones que quiero solicitar:")
+        lines.push(qsTr("Te paso los días de vacaciones que quiero solicitar:"))
         lines.push("")
         for (var i = 0; i < root.plannedRows.length; i++) {
             lines.push("· " + root.fullDateLabel(root.plannedRows[i].date))
         }
         lines.push("")
-        lines.push("Total: " + root.plannedRows.length + (root.plannedRows.length === 1 ? " día" : " días")
-            + ". Me quedarían " + root.availableCount + " disponibles de los " + root.totalDays + " del año.")
+        var dayWord = root.plannedRows.length === 1 ? qsTr("día") : qsTr("días")
+        lines.push(qsTr("Total: %1 %2. Me quedarían %3 disponibles de los %4 del año.")
+            .arg(root.plannedRows.length).arg(dayWord).arg(root.availableCount).arg(root.totalDays))
         lines.push("")
-        lines.push("Gracias,")
-        lines.push("Enviado con Vacaplan")
+        lines.push(qsTr("Gracias,"))
+        lines.push(qsTr("Enviado con Vacaplan"))
         return lines.join("\n")
     }
     function effectiveSubject() {
@@ -129,13 +131,22 @@ Item {
         return root.bodyOverride.length > 0 ? root.bodyOverride : root.defaultBody()
     }
 
+    // Saves the current contact fields immediately when "Recordar" is
+    // checked, instead of only at send time — so it's remembered even if
+    // the user closes the sheet without sending (e.g. to export instead).
+    function saveContactIfRemembered() {
+        if (root.rememberChecked) {
+            root.dataCenter.setShareContact(root.recipientName, root.recipientEmail, root.senderEmail)
+        }
+    }
+
     function isEmailReady() {
         return root.plannedRows.length > 0 && root.isValidEmail(root.recipientEmail)
     }
     function sendLabel() {
-        if (root.plannedRows.length === 0) return "Nada que enviar"
-        if (!root.isValidEmail(root.recipientEmail)) return "Falta el correo"
-        return "Enviar por email"
+        if (root.plannedRows.length === 0) return qsTr("Nada que enviar")
+        if (!root.isValidEmail(root.recipientEmail)) return qsTr("Falta el correo")
+        return qsTr("Enviar por email")
     }
     function doSendEmail() {
         if (!root.isEmailReady()) return
@@ -154,18 +165,19 @@ Item {
     }
 
     function exportNote(fmt) {
-        if (fmt === "pdf") return "Una página con el calendario y el desglose de días. Para firmar o archivar."
-        if (fmt === "csv") return "Una fila por día (fecha, estado, ámbito). Se abre directamente en Excel o Sheets."
-        return "Archivo .ics que tu responsable puede importar en Outlook o Google Calendar."
+        if (fmt === "pdf") return qsTr("Una página con el calendario y el desglose de días. Para firmar o archivar.")
+        if (fmt === "csv") return qsTr("Una fila por día (fecha, estado, ámbito). Se abre directamente en Excel o Sheets.")
+        return qsTr("Archivo .ics que tu responsable puede importar en Outlook o Google Calendar.")
     }
     function exportLabel() {
-        if (root.plannedRows.length === 0) return "Nada que exportar"
-        return "Guardar " + (root.exportFormat === "pdf" ? "PDF" : root.exportFormat === "csv" ? "CSV" : "ICS")
+        if (root.plannedRows.length === 0) return qsTr("Nada que exportar")
+        var fmtLabel = root.exportFormat === "pdf" ? qsTr("PDF") : root.exportFormat === "csv" ? qsTr("CSV") : qsTr("ICS")
+        return qsTr("Guardar %1").arg(fmtLabel)
     }
     function modeSubtitle() {
         return root.activeTab === "email"
-            ? "Comparte los días que aún no están aprobados para que tu responsable los valide."
-            : "Guarda un archivo con tus días para adjuntarlo donde quieras."
+            ? qsTr("Comparte los días que aún no están aprobados para que tu responsable los valide.")
+            : qsTr("Guarda un archivo con tus días para adjuntarlo donde quieras.")
     }
     function doExport() {
         if (root.plannedRows.length === 0 || !root.exporter) return
@@ -194,13 +206,14 @@ Item {
     function doCopyMessage() {
         var text = root.effectiveSubject() + "\n\n" + root.effectiveBody()
         var ok = root.clipboard ? root.clipboard.setText(text) : false
-        root.copyFeedback = ok ? "Copiado" : "No se pudo copiar"
+        root.copyFeedback = ok ? qsTr("Copiado") : qsTr("No se pudo copiar")
+        root.copySucceeded = ok
         copyFeedbackTimer.restart()
     }
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0.122, 0.165, 0.18, 0.42)
+        color: Style.scrim
         MouseArea { anchors.fill: parent; onClicked: root.closed() }
     }
 
@@ -235,12 +248,12 @@ Item {
                     color: Style.primary
                     Image { anchors.centerIn: parent; source: Style.icon("check-white"); width: 22; height: 22; sourceSize: Qt.size(22, 22) }
                 }
-                Text { text: "Correo preparado"; font.family: Style.fontFamily; font.pixelSize: 20; font.weight: Font.Bold; color: Style.text }
+                Text { text: qsTr("Correo preparado"); font.family: Style.fontFamily; font.pixelSize: 20; font.weight: Font.Bold; color: Style.text }
                 Text {
                     Layout.fillWidth: true
-                    text: root.recipientName + " recibirá tus " + root.plannedRows.length
-                        + (root.plannedRows.length === 1 ? " día" : " días") + " en " + root.recipientEmail
-                        + ". Siguen marcados como planeados hasta que los apruebe."
+                    text: root.plannedRows.length === 1
+                        ? qsTr("%1 recibirá tu día en %2. Siguen marcados como planeados hasta que los apruebe.").arg(root.recipientName).arg(root.recipientEmail)
+                        : qsTr("%1 recibirá tus %2 días en %3. Siguen marcados como planeados hasta que los apruebe.").arg(root.recipientName).arg(root.plannedRows.length).arg(root.recipientEmail)
                     font.family: Style.fontFamily; font.pixelSize: 13; color: Style.textSecondary; wrapMode: Text.WordWrap
                 }
                 Button {
@@ -249,7 +262,7 @@ Item {
                     Layout.fillWidth: true; Layout.topMargin: 3
                     implicitHeight: 50
                     background: Rectangle { radius: 999; color: Style.primary }
-                    contentItem: Text { text: "Hecho"; font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: Text { text: qsTr("Hecho"); font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: root.closed()
                 }
             }
@@ -263,11 +276,12 @@ Item {
                     color: Style.primary
                     Image { anchors.centerIn: parent; source: Style.icon("check-white"); width: 22; height: 22; sourceSize: Qt.size(22, 22) }
                 }
-                Text { text: "Archivo guardado"; font.family: Style.fontFamily; font.pixelSize: 20; font.weight: Font.Bold; color: Style.text }
+                Text { text: qsTr("Archivo guardado"); font.family: Style.fontFamily; font.pixelSize: 20; font.weight: Font.Bold; color: Style.text }
                 Text {
                     Layout.fillWidth: true
-                    text: "Tus " + root.plannedRows.length + (root.plannedRows.length === 1 ? " día está" : " días están")
-                        + " en " + root.savedFileName + " en Descargas. Puedes adjuntarlo donde quieras."
+                    text: root.plannedRows.length === 1
+                        ? qsTr("Tu día está en %1 en Descargas. Puedes adjuntarlo donde quieras.").arg(root.savedFileName)
+                        : qsTr("Tus %1 días están en %2 en Descargas. Puedes adjuntarlo donde quieras.").arg(root.plannedRows.length).arg(root.savedFileName)
                     font.family: Style.fontFamily; font.pixelSize: 13; color: Style.textSecondary; wrapMode: Text.WordWrap
                 }
                 Button {
@@ -276,7 +290,7 @@ Item {
                     Layout.fillWidth: true; Layout.topMargin: 3
                     implicitHeight: 50
                     background: Rectangle { radius: 999; color: Style.primary }
-                    contentItem: Text { text: "Hecho"; font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: Text { text: qsTr("Hecho"); font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: root.closed()
                 }
             }
@@ -289,7 +303,7 @@ Item {
                 spacing: 12
 
                 Text {
-                    text: root.activeTab === "email" ? "Enviar planificación" : "Exportar planificación"
+                    text: root.activeTab === "email" ? qsTr("Enviar planificación") : qsTr("Exportar planificación")
                     font.family: Style.fontFamily; font.pixelSize: 20; font.weight: Font.Bold; font.letterSpacing: -0.4; color: Style.text
                 }
 
@@ -297,7 +311,7 @@ Item {
                     Layout.fillWidth: true
                     implicitHeight: tabRow.implicitHeight + 6
                     radius: 999
-                    color: "#F1EBE0"
+                    color: Style.track
                     RowLayout {
                         id: tabRow
                         anchors.fill: parent
@@ -314,7 +328,7 @@ Item {
                                 layer.enabled: root.activeTab === "email"
                                 layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.12); shadowBlur: 0.4; shadowVerticalOffset: 1 }
                             }
-                            contentItem: Text { text: "Enviar por email"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: root.activeTab === "email" ? Style.primary : Style.textSecondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: qsTr("Enviar por email"); font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: root.activeTab === "email" ? Style.primaryInk : Style.textSecondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: root.activeTab = "email"
                         }
                         Button {
@@ -328,7 +342,7 @@ Item {
                                 layer.enabled: root.activeTab === "export"
                                 layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.12); shadowBlur: 0.4; shadowVerticalOffset: 1 }
                             }
-                            contentItem: Text { text: "Exportar archivo"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: root.activeTab === "export" ? Style.primary : Style.textSecondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: qsTr("Exportar archivo"); font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: root.activeTab === "export" ? Style.primaryInk : Style.textSecondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: root.activeTab = "export"
                         }
                     }
@@ -374,13 +388,13 @@ Item {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 7
-                                    Text { text: "ENVIAR DESDE"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
+                                    Text { text: qsTr("ENVIAR DESDE"); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
                                     Rectangle {
                                         Layout.fillWidth: true
                                         implicitHeight: senderRow.implicitHeight + 26
                                         radius: 18
-                                        color: "#FBF7F0"
-                                        border.color: "#E4DED2"
+                                        color: Style.background
+                                        border.color: Style.divider
                                         border.width: 1
                                         RowLayout {
                                             id: senderRow
@@ -389,7 +403,7 @@ Item {
                                             spacing: 10
                                             Rectangle {
                                                 width: 34; height: 34; radius: 11
-                                                color: root.isValidEmail(root.senderEmail) ? Qt.rgba(14 / 255, 124 / 255, 123 / 255, 0.12) : "#F1EBE0"
+                                                color: root.isValidEmail(root.senderEmail) ? Style.withAlpha(Style.primary, 0.12) : Style.track
                                                 Image {
                                                     anchors.centerIn: parent
                                                     source: root.isValidEmail(root.senderEmail) ? Style.icon("mail-teal") : Style.icon("mail")
@@ -399,18 +413,20 @@ Item {
                                             TextField {
                                                 Layout.fillWidth: true
                                                 text: root.senderEmail
-                                                placeholderText: "tu@empresa.com (opcional)"
+                                                placeholderText: qsTr("tu@empresa.com (opcional)")
+                                                placeholderTextColor: Style.textFaint
+                                                color: Style.text
                                                 font.family: Style.fontFamily
                                                 background: null
-                                                onTextEdited: root.senderEmail = text
+                                                onTextEdited: { root.senderEmail = text; root.saveContactIfRemembered() }
                                             }
                                         }
                                     }
                                     Text {
                                         Layout.fillWidth: true
                                         text: root.isValidEmail(root.senderEmail)
-                                            ? "Tu app de correo se abrirá con esta cuenta seleccionada."
-                                            : "Opcional. Si lo indicas, abriremos el correo desde esa cuenta."
+                                            ? qsTr("Tu app de correo se abrirá con esta cuenta seleccionada.")
+                                            : qsTr("Opcional. Si lo indicas, abriremos el correo desde esa cuenta.")
                                         font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary; wrapMode: Text.WordWrap
                                     }
                                 }
@@ -418,13 +434,13 @@ Item {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 7
-                                    Text { text: "PARA"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
+                                    Text { text: qsTr("PARA"); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
                                     Rectangle {
                                         Layout.fillWidth: true
                                         implicitHeight: paraRow.implicitHeight + 26
                                         radius: 18
-                                        color: "#FBF7F0"
-                                        border.color: "#E4DED2"
+                                        color: Style.background
+                                        border.color: Style.divider
                                         border.width: 1
                                         RowLayout {
                                             id: paraRow
@@ -433,7 +449,7 @@ Item {
                                             spacing: 10
                                             Rectangle {
                                                 width: 38; height: 38; radius: 999
-                                                color: root.isValidEmail(root.recipientEmail) ? Style.primary : "#B9C2C4"
+                                                color: root.isValidEmail(root.recipientEmail) ? Style.primaryInk : Style.textGhost
                                                 Text { anchors.centerIn: parent; text: root.initialsOf(root.recipientName); font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; color: "white" }
                                             }
                                             ColumnLayout {
@@ -442,25 +458,27 @@ Item {
                                                 TextField {
                                                     Layout.fillWidth: true
                                                     text: root.recipientName
-                                                    placeholderText: "Nombre del responsable"
+                                                    placeholderText: qsTr("Nombre del responsable")
+                                                    placeholderTextColor: Style.textFaint
                                                     font.family: Style.fontFamily
                                                     font.pixelSize: 14
                                                     font.weight: Font.Bold
                                                     color: Style.text
                                                     background: null
                                                     topPadding: 0; bottomPadding: 0
-                                                    onTextEdited: root.recipientName = text
+                                                    onTextEdited: { root.recipientName = text; root.saveContactIfRemembered() }
                                                 }
                                                 TextField {
                                                     Layout.fillWidth: true
                                                     text: root.recipientEmail
-                                                    placeholderText: "correo@empresa.com"
+                                                    placeholderText: qsTr("correo@empresa.com")
+                                                    placeholderTextColor: Style.textFaint
                                                     font.family: Style.fontFamily
                                                     font.pixelSize: 12
                                                     color: Style.textSecondary
                                                     background: null
                                                     topPadding: 0; bottomPadding: 0
-                                                    onTextEdited: root.recipientEmail = text
+                                                    onTextEdited: { root.recipientEmail = text; root.saveContactIfRemembered() }
                                                 }
                                             }
                                         }
@@ -468,16 +486,32 @@ Item {
                                     Text {
                                         visible: root.recipientEmail.length > 0 && !root.isValidEmail(root.recipientEmail)
                                         Layout.fillWidth: true
-                                        text: "Necesitamos un correo válido para abrir tu app de email."
+                                        text: qsTr("Necesitamos un correo válido para abrir tu app de email.")
                                         font.family: Style.fontFamily; font.pixelSize: 11; color: Style.accent; wrapMode: Text.WordWrap
                                     }
                                     RowLayout {
                                         Layout.topMargin: 2
                                         spacing: 8
+
+                                        // A plain MouseArea over the whole row, not a
+                                        // TapHandler on just the checkbox square — mixing
+                                        // TapHandler with the full-screen backdrop MouseArea
+                                        // let taps here fall through and also trigger the
+                                        // backdrop's onClicked, closing the whole sheet
+                                        // before the checked state (or a save) ever landed.
+                                        MouseArea {
+                                            id: rememberArea
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                root.rememberChecked = !root.rememberChecked
+                                                root.saveContactIfRemembered()
+                                            }
+                                        }
+
                                         Rectangle {
                                             width: 19; height: 19; radius: 6
-                                            color: root.rememberChecked ? Style.primary : "#FBF7F0"
-                                            border.color: root.rememberChecked ? Style.primary : "#E4DED2"
+                                            color: root.rememberChecked ? Style.primary : Style.background
+                                            border.color: root.rememberChecked ? Style.primaryBorder : Style.divider
                                             border.width: 1
                                             Image {
                                                 anchors.centerIn: parent
@@ -485,10 +519,9 @@ Item {
                                                 source: Style.icon("check-white")
                                                 width: 11; height: 11; sourceSize: Qt.size(11, 11)
                                             }
-                                            TapHandler { onTapped: root.rememberChecked = !root.rememberChecked }
                                         }
                                         Text {
-                                            text: "Recordar para los próximos envíos"
+                                            text: qsTr("Recordar para los próximos envíos")
                                             font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary
                                         }
                                     }
@@ -509,15 +542,15 @@ Item {
                                             anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                                             anchors.margins: 12
                                             spacing: 8
-                                            Text { text: "MENSAJE"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
-                                            Text { visible: root.copyFeedback.length > 0; text: root.copyFeedback; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.primary }
+                                            Text { text: qsTr("MENSAJE"); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
+                                            Text { visible: root.copyFeedback.length > 0; text: root.copyFeedback; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.primaryInk }
                                             Item { Layout.fillWidth: true }
                                             Button {
                                                 opacity: pressed ? 0.6 : 1.0
                                                 Behavior on opacity { NumberAnimation { duration: 100 } }
                                                 implicitHeight: 24
                                                 background: Rectangle { radius: 999; color: "transparent"; border.color: Style.divider; border.width: 1 }
-                                                contentItem: Text { text: root.copyFeedback === "Copiado" ? "Copiado" : "Copiar"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.copyFeedback === "Copiado" ? Style.primary : Style.textSecondary; horizontalAlignment: Text.AlignHCenter; leftPadding: 4; rightPadding: 4 }
+                                                contentItem: Text { text: root.copySucceeded ? qsTr("Copiado") : qsTr("Copiar"); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.copySucceeded ? Style.primaryInk : Style.textSecondary; horizontalAlignment: Text.AlignHCenter; leftPadding: 4; rightPadding: 4 }
                                                 onClicked: root.doCopyMessage()
                                             }
                                             Button {
@@ -525,7 +558,7 @@ Item {
                                                 Behavior on opacity { NumberAnimation { duration: 100 } }
                                                 implicitHeight: 24
                                                 background: Rectangle { color: "transparent" }
-                                                contentItem: Text { text: root.messageExpanded ? "Ocultar" : "Editar"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: Style.primary }
+                                                contentItem: Text { text: root.messageExpanded ? qsTr("Ocultar") : qsTr("Editar"); font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: Style.primaryInk }
                                                 onClicked: root.messageExpanded = !root.messageExpanded
                                             }
                                         }
@@ -547,6 +580,7 @@ Item {
                                             TextField {
                                                 Layout.fillWidth: true
                                                 text: root.effectiveSubject()
+                                                color: Style.text
                                                 font.family: Style.fontFamily
                                                 font.weight: Font.Bold
                                                 background: Rectangle { color: "transparent"; border.color: Style.divider; border.width: 0; anchors.bottom: parent.bottom }
@@ -557,15 +591,16 @@ Item {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 190
                                                 text: root.effectiveBody()
+                                                color: Style.text
                                                 wrapMode: Text.WordWrap
                                                 font.family: Style.fontFamily
                                                 font.pixelSize: 12
-                                                background: Rectangle { radius: 12; color: "white"; border.color: Style.divider; border.width: 1 }
+                                                background: Rectangle { radius: 12; color: Style.sunken; border.color: Style.divider; border.width: 1 }
                                                 onTextChanged: if (activeFocus) root.bodyOverride = text
                                             }
                                             Text {
                                                 Layout.fillWidth: true
-                                                text: "Se guarda solo. Si lo dejas en blanco usaremos el texto por defecto."
+                                                text: qsTr("Se guarda solo. Si lo dejas en blanco usaremos el texto por defecto.")
                                                 font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary; wrapMode: Text.WordWrap
                                             }
                                         }
@@ -578,7 +613,7 @@ Item {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 8
-                                Text { text: "QUÉ SE ENVÍA"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
+                                Text { text: qsTr("QUÉ SE ENVÍA"); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
                                 Flow {
                                     Layout.fillWidth: true
                                     spacing: 6
@@ -600,7 +635,7 @@ Item {
                                 Text {
                                     visible: root.plannedRows.length === 0
                                     Layout.fillWidth: true
-                                    text: "No tienes días sin confirmar. Marca algunos en el calendario para poder enviarlos."
+                                    text: qsTr("No tienes días sin confirmar. Marca algunos en el calendario para poder enviarlos.")
                                     font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary; wrapMode: Text.WordWrap
                                 }
                             }
@@ -611,12 +646,12 @@ Item {
                                 Layout.fillWidth: true
                                 spacing: 10
 
-                                Text { text: "FORMATO"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
+                                Text { text: qsTr("FORMATO"); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 0.4; color: Style.textSecondary }
                                 Flow {
                                     Layout.fillWidth: true
                                     spacing: 7
                                     Repeater {
-                                        model: [ { k: "pdf", label: "PDF" }, { k: "csv", label: "CSV" }, { k: "ics", label: "Calendario" } ]
+                                        model: [ { k: "pdf", label: qsTr("PDF") }, { k: "csv", label: qsTr("CSV") }, { k: "ics", label: qsTr("Calendario") } ]
                                         delegate: Button {
                                             id: fmtButton
                                             required property var modelData
@@ -625,8 +660,8 @@ Item {
                                             implicitHeight: 40
                                             background: Rectangle {
                                                 radius: 999
-                                                color: root.exportFormat === fmtButton.modelData.k ? Style.primary : "#FBF7F0"
-                                                border.color: root.exportFormat === fmtButton.modelData.k ? Style.primary : "#E4DED2"
+                                                color: root.exportFormat === fmtButton.modelData.k ? Style.primary : Style.background
+                                                border.color: root.exportFormat === fmtButton.modelData.k ? Style.primaryBorder : Style.divider
                                                 border.width: 1
                                             }
                                             contentItem: Text {
@@ -677,7 +712,7 @@ Item {
                         enabled: root.activeTab === "email" ? root.isEmailReady() : root.plannedRows.length > 0
                         background: Rectangle {
                             radius: 999
-                            color: sendButton.enabled ? (root.activeTab === "email" ? Style.accent : Style.primary) : "#F1EBE0"
+                            color: sendButton.enabled ? (root.activeTab === "email" ? Style.accent : Style.primary) : Style.track
                             layer.enabled: sendButton.enabled
                             layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(14 / 255, 124 / 255, 123 / 255, 0.26); shadowBlur: 0.6; shadowVerticalOffset: 6 }
                         }
@@ -692,13 +727,13 @@ Item {
                                 layer.enabled: true
                                 layer.effect: MultiEffect {
                                     colorization: 1.0
-                                    colorizationColor: sendButton.enabled ? "white" : "#B9C2C4"
+                                    colorizationColor: sendButton.enabled ? "white" : Style.textGhost
                                 }
                             }
                             Text {
                                 text: root.activeTab === "email" ? root.sendLabel() : root.exportLabel()
                                 font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold
-                                color: sendButton.enabled ? "white" : "#B9C2C4"
+                                color: sendButton.enabled ? "white" : Style.textGhost
                             }
                             Item { Layout.fillWidth: true }
                         }
@@ -707,7 +742,7 @@ Item {
                     Text {
                         visible: root.activeTab === "email"
                         Layout.fillWidth: true
-                        text: "Se abrirá tu app de correo con el mensaje listo para enviar."
+                        text: qsTr("Se abrirá tu app de correo con el mensaje listo para enviar.")
                         font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -717,7 +752,7 @@ Item {
                         Layout.fillWidth: true
                         implicitHeight: 46
                         background: Rectangle { radius: 999; color: Style.surface; border.color: Style.divider; border.width: 1 }
-                        contentItem: Text { text: "Cancelar"; font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: Style.textSecondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: qsTr("Cancelar"); font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: Style.textSecondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: root.closed()
                     }
                 }

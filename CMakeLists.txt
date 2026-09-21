@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(Vacaplan VERSION 0.1 LANGUAGES CXX)
+project(Vacaplan VERSION 0.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network QuickControls2 Svg)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network QuickControls2 Svg LinguistTools)
 
-qt_standard_project_setup(REQUIRES 6.5)
+qt_standard_project_setup(REQUIRES 6.7
+    I18N_SOURCE_LANGUAGE es
+    I18N_TRANSLATED_LANGUAGES en
+)
 
 qt_add_executable(appVacaplan
     main.cpp
@@ -49,16 +52,19 @@ qt_add_qml_module(appVacaplan
         qml/HomePage.qml
         qml/PlanCalendarPage.qml
         qml/ShareModal.qml
+        qml/SettingsModal.qml
     SOURCES
         datacenter.h datacenter.cpp
         holidayprovider.h holidayprovider.cpp
         clipboard.h clipboard.cpp
         exporter.h exporter.cpp
+        languagemanager.h languagemanager.cpp
 )
 
 qt_add_resources(appVacaplan "icons"
     FILES
         icons/alert-circle.svg
+        icons/app-icon.svg
         icons/beach-umbrella.svg
         icons/bookmark-manual.svg
         icons/calendar-check.svg
@@ -68,6 +74,7 @@ qt_add_resources(appVacaplan "icons"
         icons/check.svg
         icons/check-white.svg
         icons/chevron-left.svg
+        icons/dresoft-logo.png
         icons/chevron-right.svg
         icons/chevron-right-white.svg
         icons/flag-local.svg
@@ -88,6 +95,7 @@ qt_add_resources(appVacaplan "icons"
         icons/plus-white.svg
         icons/reset-accent.svg
         icons/rotate-ccw.svg
+        icons/settings.svg
         icons/share.svg
         icons/share-white.svg
         icons/suitcase.svg
@@ -100,7 +108,18 @@ qt_add_resources(appVacaplan "fonts"
         fonts/DM_Sans.ttf
 )
 
+# Source strings (qsTr/tr) are Spanish; the "en" .qm is the only shipped
+# translation, loaded at runtime in main.cpp — see the QTranslator there.
+# Source/target languages come from qt_standard_project_setup() above.
+qt_add_translations(appVacaplan
+    TS_FILE_BASE Vacaplan
+    TS_FILE_DIR ${CMAKE_SOURCE_DIR}/translations
+    RESOURCE_PREFIX /i18n
+)
+
 set_target_properties(appVacaplan PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER com.dreSoft.Vacaplan
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/macos/Info.plist.in
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE

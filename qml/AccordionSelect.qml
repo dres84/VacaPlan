@@ -10,12 +10,12 @@ ColumnLayout {
     id: root
     property string label: ""
     property string value: ""
-    property string placeholder: "Elige una opción"
+    property string placeholder: qsTr("Elige una opción")
     property var options: []
     property bool open: false
     property bool searchable: false
     property string query: ""
-    property string searchPlaceholder: "Busca..."
+    property string searchPlaceholder: qsTr("Busca...")
     property string hintText: ""
     signal toggled()
     signal optionPicked(string option)
@@ -31,7 +31,7 @@ ColumnLayout {
         implicitHeight: headerCol.implicitHeight + 8
         radius: 20
         color: Style.surface
-        border.color: root.open ? Style.primary : Style.divider
+        border.color: root.open ? Style.primaryBorder : Style.divider
         border.width: root.open ? 1.5 : 1
 
         Behavior on border.color { ColorAnimation { duration: Style.animationTime } }
@@ -68,7 +68,7 @@ ColumnLayout {
                             font.family: Style.fontFamily
                             font.pixelSize: 15
                             font.weight: root.value.length > 0 ? Font.Bold : Font.Normal
-                            color: root.value.length > 0 ? Style.text : "#9AA6AA"
+                            color: root.value.length > 0 ? Style.text : Style.textFaint
                         }
                     }
                     Item { Layout.fillWidth: true }
@@ -110,7 +110,15 @@ ColumnLayout {
                             visible: root.searchable
                             text: root.query
                             placeholderText: root.searchPlaceholder
+                            placeholderTextColor: Style.textFaint
+                            color: Style.text
                             font.family: Style.fontFamily
+                            background: Rectangle {
+                                radius: Style.mediumRadius
+                                color: Style.sunken
+                                border.color: Style.divider
+                                border.width: 1
+                            }
                             onTextEdited: root.queryEdited(text)
                         }
 
@@ -129,7 +137,7 @@ ColumnLayout {
                                     background: Rectangle {
                                         radius: 999
                                         color: modelData === root.value ? Style.primary : Style.background
-                                        border.color: modelData === root.value ? Style.primary : Style.divider
+                                        border.color: modelData === root.value ? Style.primaryBorder : Style.divider
                                         border.width: 1
                                     }
                                     contentItem: Text {

@@ -15,11 +15,18 @@ Page {
     property var exporter
     signal back()
 
+    property bool settingsOpen: false
+
     background: Rectangle { color: Style.background }
 
-    readonly property var months: ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-    readonly property var weekdaysShort: ["L", "M", "X", "J", "V", "S", "D"]
+    // Reset scroll position whenever this page becomes the active StackView
+    // item — otherwise reopening Planificar lands mid-scroll instead of at
+    // the top.
+    StackView.onActivated: scrollView.contentY = 0
+
+    readonly property var months: [qsTr("enero"), qsTr("febrero"), qsTr("marzo"), qsTr("abril"), qsTr("mayo"), qsTr("junio"),
+        qsTr("julio"), qsTr("agosto"), qsTr("septiembre"), qsTr("octubre"), qsTr("noviembre"), qsTr("diciembre")]
+    readonly property var weekdaysShort: [qsTr("L"), qsTr("M"), qsTr("X"), qsTr("J"), qsTr("V"), qsTr("S"), qsTr("D")]
     readonly property int realYear: new Date().getFullYear()
     readonly property int realMonth: new Date().getMonth()
     readonly property int realDay: new Date().getDate()
@@ -29,12 +36,12 @@ Page {
     property int month: realMonth
     property string brush: "planned"
     property string highlightKey: ""
-    property bool shareOpen: true
+    property bool shareOpen: false
 
     readonly property var dayStates: ({
-        used: { color: Style.textSecondary, label: "Gastados" },
-        confirmed: { color: Style.primary, label: "Confirmados" },
-        planned: { color: Style.accent, label: "Planeados" }
+        used: { label: qsTr("Gastados") },
+        confirmed: { label: qsTr("Confirmados") },
+        planned: { label: qsTr("Planeados") }
     })
     readonly property var stateOrder: ["used", "confirmed", "planned"]
 
@@ -74,18 +81,16 @@ Page {
         }
         return null
     }
-    function dotColorFor(scope) {
-        if (scope === "nacional") return Style.scopeColor("nacional")
-        if (scope === "autonomico" || scope === "regional") return Style.scopeColor("autonomico")
-        return Style.scopeColor("manual")
-    }
+    // Holiday scope fill/border tint for a calendar cell. Familia B (scope
+    // colors: violet/blue/cyan/indigo/slate) shares no hue with Familia A
+    // (day-mark state colors: coral/green/slate), so — unlike before this
+    // color system existed — a scoped holiday can't be mistaken for a
+    // planned/confirmed/used day anymore, and scopes can be told apart again.
     function holidayTintBg(scope) {
-        var c = Qt.color(root.dotColorFor(scope))
-        return Qt.rgba(c.r, c.g, c.b, 0.15)
+        return Style.withAlpha(Style.scopeColor(scope), 0.16863) // fill + 2b (17%)
     }
     function holidayTintBorder(scope) {
-        var c = Qt.color(root.dotColorFor(scope))
-        return Qt.rgba(c.r, c.g, c.b, 0.33)
+        return Style.withAlpha(Style.scopeColor(scope), 0.34902) // fill + 59 (35%)
     }
     function isWeekend(day, month, year) {
         var dow = new Date(year, month, day).getDay()
@@ -167,6 +172,7 @@ Page {
         // Header: back, title, year tabs
         RowLayout {
             Layout.fillWidth: true
+            Layout.topMargin: Style.mediumSpace
             Layout.leftMargin: Style.mediumMargin
             Layout.rightMargin: Style.mediumMargin
             Layout.bottomMargin: 10
@@ -187,7 +193,7 @@ Page {
                 onClicked: root.back()
             }
             Text {
-                text: "Planificar"
+                text: qsTr("Planificar")
                 font.family: Style.fontFamily
                 font.pixelSize: Style.heading2
                 font.weight: Font.Bold
@@ -195,11 +201,32 @@ Page {
             }
             Item { Layout.fillWidth: true }
 
+            Button {
+                opacity: pressed ? 0.6 : 1.0
+                Behavior on opacity { NumberAnimation { duration: 100 } }
+                id: settingsButton
+                implicitWidth: 34
+                implicitHeight: 34
+                background: Rectangle {
+                    radius: 999
+                    color: Style.surface
+                    border.color: settingsButton.pressed ? Style.primaryBorder : Style.divider
+                    border.width: 1
+                }
+                contentItem: Image {
+                    anchors.centerIn: parent
+                    source: Style.icon("settings")
+                    width: 16; height: 16
+                    sourceSize: Qt.size(16, 16)
+                }
+                onClicked: root.settingsOpen = true
+            }
+
             Rectangle {
                 implicitWidth: yearTabsRow.implicitWidth + 6
                 implicitHeight: yearTabsRow.implicitHeight + 6
                 radius: 999
-                color: "#F1EBE0"
+                color: Style.track
 
                 RowLayout {
                     id: yearTabsRow
@@ -223,7 +250,7 @@ Page {
                             font.family: Style.fontFamily
                             font.pixelSize: Style.caption
                             font.weight: Font.Bold
-                            color: root.calYear === root.realYear ? Style.primary : Style.textSecondary
+                            color: root.calYear === root.realYear ? Style.primaryInk : Style.textSecondary
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -246,7 +273,7 @@ Page {
                             font.family: Style.fontFamily
                             font.pixelSize: Style.caption
                             font.weight: Font.Bold
-                            color: root.calYear === root.nextYear ? Style.primary : Style.textSecondary
+                            color: root.calYear === root.nextYear ? Style.primaryInk : Style.textSecondary
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -309,8 +336,8 @@ Page {
                         implicitHeight: 38
                         background: Rectangle {
                             radius: 999
-                            color: brushButton.active ? root.dayStates[brushButton.modelData].color : Style.surface
-                            border.color: brushButton.active ? root.dayStates[brushButton.modelData].color : Style.divider
+                            color: brushButton.active ? Style.stateFill(brushButton.modelData) : Style.withAlpha(Style.stateFill(brushButton.modelData), 0.14902)
+                            border.color: brushButton.active ? Style.stateFill(brushButton.modelData) : Style.withAlpha(Style.stateFill(brushButton.modelData), 0.34902)
                             border.width: 1
                         }
                         contentItem: Item {
@@ -323,7 +350,7 @@ Page {
                                 Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: 8; height: 8; radius: 4
-                                    color: brushButton.active ? Qt.rgba(1, 1, 1, 0.85) : root.dayStates[brushButton.modelData].color
+                                    color: brushButton.active ? Style.stateOn(brushButton.modelData) : Style.stateFill(brushButton.modelData)
                                 }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
@@ -331,7 +358,7 @@ Page {
                                     font.family: Style.fontFamily
                                     font.pixelSize: 12
                                     font.weight: Font.Bold
-                                    color: brushButton.active ? "white" : Style.textSecondary
+                                    color: brushButton.active ? Style.stateOn(brushButton.modelData) : Style.stateInk(brushButton.modelData)
                                 }
                             }
                         }
@@ -385,7 +412,7 @@ Page {
                         Layout.fillWidth: true
                         spacing: 10
                         Text {
-                            text: plannedSection.anySent ? "Pendiente de aprobación" : "Sin confirmar"
+                            text: plannedSection.anySent ? qsTr("Pendiente de aprobación") : qsTr("Sin confirmar")
                             font.family: Style.fontFamily
                             font.pixelSize: 13
                             font.weight: Font.Bold
@@ -408,11 +435,11 @@ Page {
                                     Image { anchors.verticalCenter: parent.verticalCenter; source: Style.icon("check"); width: 13; height: 13; sourceSize: Qt.size(13, 13) }
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: "Aprobar los " + plannedSection.plannedList.length
+                                        text: qsTr("Aprobar los %1").arg(plannedSection.plannedList.length)
                                         font.family: Style.fontFamily
                                         font.pixelSize: 12
                                         font.weight: Font.Bold
-                                        color: Style.primary
+                                        color: Style.primaryInk
                                     }
                                 }
                             }
@@ -446,7 +473,7 @@ Page {
                                 readonly property bool isHl: root.highlightKey === (dm.year + ":" + dm.month + ":" + dm.day)
 
                                 radius: 999
-                                color: modelData.sent ? "#C9553A" : Style.accent
+                                color: modelData.sent ? "#B8371A" : Style.stateFill("planned")
                                 implicitHeight: 28
                                 implicitWidth: monthDot.width + 6 + chipLabel.implicitWidth + 16 + 22 + 6
                                 border.width: isHl ? 2.5 : 0
@@ -478,7 +505,7 @@ Page {
                                         font.family: Style.fontFamily
                                         font.pixelSize: 12
                                         font.weight: Font.Bold
-                                        color: "white"
+                                        color: plannedChip.modelData.sent ? "white" : Style.stateOn("planned")
                                     }
                                     TapHandler { id: labelTap; onTapped: root.goToDay(plannedChip.dm.day, plannedChip.dm.month, plannedChip.dm.year) }
                                 }
@@ -570,14 +597,14 @@ Page {
                                             anchors.fill: parent
                                             visible: dayCell.modelData.day > 0
                                             radius: 12
-                                            color: dayCell.mark ? root.dayStates[dayCell.mark.state].color
+                                            color: dayCell.mark ? Style.stateFill(dayCell.mark.state)
                                                    : dayCell.holiday ? root.holidayTintBg(dayCell.holiday.scope)
-                                                   : dayCell.weekend ? "#F4EFE5"
+                                                   : dayCell.weekend ? Style.weekend
                                                    : Style.background
                                             border.color: dayCell.isHighlighted ? Style.text
-                                                   : dayCell.mark ? root.dayStates[dayCell.mark.state].color
+                                                   : dayCell.mark ? Style.stateFill(dayCell.mark.state)
                                                    : dayCell.holiday ? root.holidayTintBorder(dayCell.holiday.scope)
-                                                   : "#EFEADF"
+                                                   : Style.cellBorder
                                             border.width: dayCell.isHighlighted ? 2.5 : 1
 
                                             Rectangle {
@@ -595,9 +622,9 @@ Page {
                                                 font.family: Style.fontFamily
                                                 font.pixelSize: 14
                                                 font.weight: (dayCell.mark || dayCell.holiday) ? Font.Bold : Font.Medium
-                                                color: dayCell.mark ? "white"
-                                                       : dayCell.holiday ? root.dotColorFor(dayCell.holiday.scope)
-                                                       : dayCell.weekend ? "#B9C2C4" : Style.text
+                                                color: dayCell.mark ? Style.stateOn(dayCell.mark.state)
+                                                       : dayCell.holiday ? Style.scopeInk(dayCell.holiday.scope)
+                                                       : dayCell.weekend ? Style.textGhost : Style.text
                                             }
                                         }
                                     }
@@ -648,11 +675,11 @@ Page {
 
                             Repeater {
                                 model: [
-                                    { label: "Planeado", color: Style.accent },
-                                    { label: "Confirmado", color: Style.primary },
-                                    { label: "Gastado", color: Style.textSecondary },
-                                    { label: "Festivo", color: Style.scopeColor("manual") },
-                                    { label: "Hoy", color: Style.text }
+                                    { label: qsTr("Planeado"), color: Style.stateFill("planned") },
+                                    { label: qsTr("Confirmado"), color: Style.stateFill("confirmed") },
+                                    { label: qsTr("Gastado"), color: Style.stateFill("used") },
+                                    { label: qsTr("Festivo"), color: Style.scopeColor("nacional") },
+                                    { label: qsTr("Hoy"), color: Style.text }
                                 ]
                                 delegate: RowLayout {
                                     required property var modelData
@@ -686,7 +713,7 @@ Page {
                         spacing: 11
 
                         Text {
-                            text: "Resumen " + root.calYear
+                            text: qsTr("Resumen %1").arg(root.calYear)
                             font.family: Style.fontFamily
                             font.pixelSize: 14
                             font.weight: Font.Bold
@@ -703,9 +730,9 @@ Page {
                                 required property var modelData
                                 Layout.fillWidth: true
                                 spacing: 10
-                                Rectangle { width: 9; height: 9; radius: 4.5; color: root.dayStates[modelData.key].color }
+                                Rectangle { width: 9; height: 9; radius: 4.5; color: Style.stateFill(modelData.key) }
                                 Text { Layout.fillWidth: true; text: root.dayStates[modelData.key].label; font.family: Style.fontFamily; font.pixelSize: 12; color: Style.text }
-                                Text { text: modelData.value; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; color: root.dayStates[modelData.key].color }
+                                Text { text: modelData.value; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; color: Style.stateInk(modelData.key) }
                             }
                         }
                         RowLayout {
@@ -715,8 +742,8 @@ Page {
                                 - (root.dataCenter ? root.dataCenter.dayMarkCount(root.calYear, "used") : 0)
                                 - (root.dataCenter ? root.dataCenter.dayMarkCount(root.calYear, "confirmed") : 0)
                                 - (root.dataCenter ? root.dataCenter.dayMarkCount(root.calYear, "planned") : 0))
-                            Rectangle { width: 9; height: 9; radius: 4.5; color: "#DCD5C7" }
-                            Text { Layout.fillWidth: true; text: "Disponibles"; font.family: Style.fontFamily; font.pixelSize: 12; color: Style.text }
+                            Rectangle { width: 9; height: 9; radius: 4.5; color: Style.stateFill("available") }
+                            Text { Layout.fillWidth: true; text: qsTr("Disponibles"); font.family: Style.fontFamily; font.pixelSize: 12; color: Style.text }
                             Text { text: parent.available; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; color: Style.text }
                         }
                     }
@@ -737,7 +764,7 @@ Page {
                     readonly property var confirmedList: root.yearMarks.filter(function(m) { return m.state === "confirmed" })
 
                     Text {
-                        text: "Confirmados"
+                        text: qsTr("Confirmados")
                         font.family: Style.fontFamily
                         font.pixelSize: 13
                         font.weight: Font.Bold
@@ -838,8 +865,8 @@ Page {
             gradient: Gradient {
                 orientation: Gradient.Vertical
                 GradientStop { position: 0.0; color: "transparent" }
-                GradientStop { position: 0.5; color: Qt.rgba(0.122, 0.165, 0.18, 0.07) }
-                GradientStop { position: 1.0; color: Qt.rgba(0.122, 0.165, 0.18, 0.18) }
+                GradientStop { position: 0.5; color: Style.withAlpha(Style.text, 0.07) }
+                GradientStop { position: 1.0; color: Style.withAlpha(Style.text, 0.18) }
             }
         }
         }
@@ -870,7 +897,7 @@ Page {
                     implicitHeight: 52
                     background: Rectangle { radius: 999; color: Style.primary }
                     contentItem: Text {
-                        text: "Guardar"
+                        text: qsTr("Guardar")
                         font.family: Style.fontFamily
                         font.pixelSize: 15
                         font.weight: Font.Bold
@@ -896,11 +923,11 @@ Page {
                             Image { anchors.verticalCenter: parent.verticalCenter; source: Style.icon("share"); width: 17; height: 17; sourceSize: Qt.size(17, 17) }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "Enviar"
+                                text: qsTr("Enviar")
                                 font.family: Style.fontFamily
                                 font.pixelSize: 15
                                 font.weight: Font.Bold
-                                color: Style.primary
+                                color: Style.primaryInk
                             }
                         }
                     }
@@ -928,5 +955,11 @@ Page {
         plannedCount: root.plannedCountYear
         availableCount: root.availableCountYear
         onClosed: root.shareOpen = false
+    }
+
+    SettingsModal {
+        anchors.fill: parent
+        open: root.settingsOpen
+        onClosed: root.settingsOpen = false
     }
 }

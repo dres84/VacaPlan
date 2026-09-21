@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.dreSoft.vacaplan" android:versionCode="1" android:versionName="0.1.0" android:installLocation="auto">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.dreSoft.vacaplan" android:versionCode="2" android:versionName="0.2.0" android:installLocation="auto">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
-    <application android:name="org.qtproject.qt.android.bindings.QtApplication" android:label="Vacaplan" android:icon="@drawable/icon" android:hardwareAccelerated="true" android:theme="@style/AppTheme">
+    <application android:name="org.qtproject.qt.android.bindings.QtApplication" android:label="Vacaplan" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:hardwareAccelerated="true" android:theme="@style/AppTheme">
 
         <activity android:name="org.qtproject.qt.android.bindings.QtActivity" android:exported="true" android:label="Vacaplan" android:screenOrientation="portrait" android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation" android:launchMode="singleTop">
             <intent-filter>

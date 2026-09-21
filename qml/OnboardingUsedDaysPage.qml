@@ -11,12 +11,19 @@ Page {
     signal finished()
     signal back()
 
+    property bool settingsOpen: false
+
     background: Rectangle { color: Style.background }
 
-    readonly property var months: ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-    readonly property var weekdaysDow: ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
-    readonly property var weekdaysShort: ["L", "M", "X", "J", "V", "S", "D"]
+    // Reset scroll position whenever this page becomes the active StackView
+    // item — otherwise coming back via "Atrás" lands mid-scroll instead of
+    // at the top.
+    StackView.onActivated: scrollView.contentY = 0
+
+    readonly property var months: [qsTr("enero"), qsTr("febrero"), qsTr("marzo"), qsTr("abril"), qsTr("mayo"), qsTr("junio"),
+        qsTr("julio"), qsTr("agosto"), qsTr("septiembre"), qsTr("octubre"), qsTr("noviembre"), qsTr("diciembre")]
+    readonly property var weekdaysDow: [qsTr("domingo"), qsTr("lunes"), qsTr("martes"), qsTr("miércoles"), qsTr("jueves"), qsTr("viernes"), qsTr("sábado")]
+    readonly property var weekdaysShort: [qsTr("L"), qsTr("M"), qsTr("X"), qsTr("J"), qsTr("V"), qsTr("S"), qsTr("D")]
     readonly property int year: new Date().getFullYear()
 
     property int totalDays: dataCenter ? dataCenter.data.totalVacationDays : 22
@@ -30,17 +37,8 @@ Page {
     property string highlightKey: ""
 
     // One hue per month, evenly spaced, so each used day reads as "which
-    // month" at a glance in the chip list and in the calendar itself —
-    // matches the design's 12 oklch(58% 0.10 hue) swatches closely enough
-    // with HSL, which QML supports natively.
-    readonly property var monthColors: {
-        var arr = []
-        for (var i = 0; i < 12; i++) {
-            var hue = ((160 + i * 32) % 360) / 360
-            arr.push(Qt.hsla(hue, 0.38, 0.40, 1))
-        }
-        return arr
-    }
+    // month" at a glance in the chip list and in the calendar itself.
+    readonly property var monthColors: Style.monthPillColors
 
     property bool hoursOpen: false
     property string hoursDate: ""
@@ -65,7 +63,7 @@ Page {
     function shortLabel(iso) {
         var p = iso.split("-")
         var d = parseInt(p[2]); var m = parseInt(p[1]) - 1
-        return d + " de " + months[m] + " de " + p[0]
+        return qsTr("%1 de %2 de %3").arg(d).arg(months[m]).arg(p[0])
     }
 
     function shortChipLabel(iso) {
@@ -213,8 +211,9 @@ Page {
 
         StepHeader {
             step: 3
-            linkText: "Atrás"
+            linkText: qsTr("Atrás")
             onLinkClicked: root.back()
+            onSettingsClicked: root.settingsOpen = true
         }
 
         Flickable {
@@ -251,7 +250,7 @@ Page {
 
                     Image { source: Style.icon("calendar-check"); width: 32; height: 32; sourceSize: Qt.size(32, 32) }
                     Text {
-                        text: "¿Ya has gastado días de vacaciones?"
+                        text: qsTr("¿Ya has gastado días de vacaciones?")
                         font.family: Style.fontFamily
                         font.pixelSize: 27
                         font.weight: Font.Bold
@@ -261,7 +260,7 @@ Page {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: "Si apuntas las fechas verás tus vacaciones en el calendario. Si solo te interesa el saldo, con el número basta."
+                        text: qsTr("Si apuntas las fechas verás tus vacaciones en el calendario. Si solo te interesa el saldo, con el número basta.")
                         font.family: Style.fontFamily
                         font.pixelSize: 14
                         color: Style.textSecondary
@@ -281,7 +280,7 @@ Page {
                         implicitWidth: modeTabsRow.implicitWidth + 6
                         implicitHeight: modeTabsRow.implicitHeight + 6
                         radius: 999
-                        color: "#F1EBE0"
+                        color: Style.track
 
                         RowLayout {
                             id: modeTabsRow
@@ -301,11 +300,11 @@ Page {
                                 }
                                 contentItem: Text {
                                     id: datesTabText
-                                    text: "Apuntar fechas"
+                                    text: qsTr("Apuntar fechas")
                                     font.family: Style.fontFamily
                                     font.pixelSize: 12
                                     font.weight: Font.Bold
-                                    color: root.mode === "dates" ? Style.primary : Style.textSecondary
+                                    color: root.mode === "dates" ? Style.primaryInk : Style.textSecondary
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -324,11 +323,11 @@ Page {
                                 }
                                 contentItem: Text {
                                     id: countTabText
-                                    text: "Solo el número"
+                                    text: qsTr("Solo el número")
                                     font.family: Style.fontFamily
                                     font.pixelSize: 12
                                     font.weight: Font.Bold
-                                    color: root.mode === "count" ? Style.primary : Style.textSecondary
+                                    color: root.mode === "count" ? Style.primaryInk : Style.textSecondary
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -346,11 +345,11 @@ Page {
                         Text {
                             id: recomText
                             anchors.centerIn: parent
-                            text: "RECOM."
+                            text: qsTr("RECOM.")
                             font.family: Style.fontFamily
                             font.pixelSize: 11
                             font.weight: Font.Medium
-                            color: Style.primary
+                            color: Style.primaryInk
                         }
                     }
                     Item { Layout.fillWidth: true }
@@ -376,22 +375,22 @@ Page {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 3
-                            Text { text: "Días usados"; font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary }
+                            Text { text: qsTr("Días usados"); font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary }
                             RowLayout {
                                 spacing: 4
                                 Text { text: root.usedTotal; font.family: Style.fontFamily; font.pixelSize: 19; font.weight: Font.Bold; font.letterSpacing: -0.4; color: Style.text }
-                                Text { text: "de " + root.totalDays; font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary; Layout.alignment: Qt.AlignBaseline }
+                                Text { text: qsTr("de %1").arg(root.totalDays); font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary; Layout.alignment: Qt.AlignBaseline }
                             }
                         }
-                        Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 34; color: "#EFEADF" }
+                        Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 34; color: Style.dividerSoft }
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 3
-                            Text { text: "Te quedan"; font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary }
+                            Text { text: qsTr("Te quedan"); font.family: Style.fontFamily; font.pixelSize: 11; color: Style.textSecondary }
                             RowLayout {
                                 spacing: 4
-                                Text { text: root.leftDays; font.family: Style.fontFamily; font.pixelSize: 19; font.weight: Font.Bold; font.letterSpacing: -0.4; color: root.leftDays < 0 ? Style.accent : Style.primary }
-                                Text { text: "días"; font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary; Layout.alignment: Qt.AlignBaseline }
+                                Text { text: root.leftDays; font.family: Style.fontFamily; font.pixelSize: 19; font.weight: Font.Bold; font.letterSpacing: -0.4; color: root.leftDays < 0 ? Style.accent : Style.primaryInk }
+                                Text { text: qsTr("días"); font.family: Style.fontFamily; font.pixelSize: 12; color: Style.textSecondary; Layout.alignment: Qt.AlignBaseline }
                             }
                         }
                     }
@@ -486,14 +485,14 @@ Page {
                                 Image { Layout.alignment: Qt.AlignHCenter; source: Style.icon("beach-umbrella"); width: 38; height: 38; sourceSize: Qt.size(38, 38); opacity: 0.35 }
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
-                                    text: "Aún no has gastado nada"
+                                    text: qsTr("Aún no has gastado nada")
                                     font.family: Style.fontFamily; font.pixelSize: 15; font.weight: Font.Bold; color: Style.text
                                     horizontalAlignment: Text.AlignHCenter
                                 }
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
                                     Layout.fillWidth: true
-                                    text: "Empiezas el año con los " + root.totalDays + " días intactos. Si ya cogiste alguno, añádelo abajo."
+                                    text: qsTr("Empiezas el año con los %1 días intactos. Si ya cogiste alguno, añádelo abajo.").arg(root.totalDays)
                                     font.family: Style.fontFamily; font.pixelSize: 13; color: Style.textSecondary
                                     horizontalAlignment: Text.AlignHCenter
                                     wrapMode: Text.WordWrap
@@ -520,7 +519,7 @@ Page {
                                 implicitHeight: pickerCol.implicitHeight + 24
                                 radius: Style.listRadius
                                 color: Style.surface
-                                border.color: Style.primary
+                                border.color: Style.primaryBorder
                                 border.width: 1
 
                                 ColumnLayout {
@@ -542,7 +541,7 @@ Page {
                                         }
                                         Text {
                                             Layout.fillWidth: true
-                                            text: root.months[root.calendarMonth][0].toUpperCase() + root.months[root.calendarMonth].slice(1) + " de " + root.year
+                                            text: qsTr("%1 de %2").arg(root.months[root.calendarMonth][0].toUpperCase() + root.months[root.calendarMonth].slice(1)).arg(root.year)
                                             font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: root.monthColors[root.calendarMonth]
                                             horizontalAlignment: Text.AlignHCenter
                                         }
@@ -613,7 +612,7 @@ Page {
                                                         border.color: dayCell.isHighlighted ? Style.text
                                                                : dayCell.isSelected ? root.monthColors[root.calendarMonth]
                                                                : dayCell.holiday ? root.holidayTintBorder(dayCell.holiday.scope)
-                                                               : "#EFEADF"
+                                                               : Style.cellBorder
                                                         border.width: dayCell.isHighlighted ? 2.5 : 1
                                                         Text {
                                                             anchors.centerIn: parent
@@ -623,7 +622,7 @@ Page {
                                                             font.weight: (dayCell.isSelected || dayCell.holiday) ? Font.Bold : Font.Medium
                                                             color: dayCell.isSelected ? "white"
                                                                    : dayCell.holiday ? root.dotColorFor(dayCell.holiday.scope)
-                                                                   : dayCell.isWeekend ? "#B9C2C4" : Style.text
+                                                                   : dayCell.isWeekend ? Style.textGhost : Style.text
                                                         }
                                                     }
                                                 }
@@ -680,10 +679,10 @@ Page {
 
                                     Text {
                                         Layout.topMargin: 2
-                                        text: "Mantén pulsado y arrastra para marcar varios días de golpe."
+                                        text: qsTr("Mantén pulsado y arrastra para marcar varios días de golpe.")
                                         font.family: Style.fontFamily
                                         font.pixelSize: 11
-                                        color: "#9AA6AA"
+                                        color: Style.textFaint
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                     }
@@ -694,17 +693,17 @@ Page {
                                         RowLayout {
                                             spacing: 5
                                             Rectangle { width: 7; height: 7; radius: 3.5; color: Style.scopeColor("nacional") }
-                                            Text { text: "Nacional"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
+                                            Text { text: qsTr("Nacional"); font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                                         }
                                         RowLayout {
                                             spacing: 5
                                             Rectangle { width: 7; height: 7; radius: 3.5; color: Style.scopeColor("autonomico") }
-                                            Text { text: "Autonómico"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
+                                            Text { text: qsTr("Autonómico"); font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                                         }
                                         RowLayout {
                                             spacing: 5
                                             Rectangle { width: 7; height: 7; radius: 3.5; color: Style.scopeColor("manual") }
-                                            Text { text: "Local"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
+                                            Text { text: qsTr("Local"); font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textSecondary }
                                         }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -716,8 +715,16 @@ Page {
                                         TextField {
                                             Layout.fillWidth: true
                                             text: root.dayManual
-                                            placeholderText: "dd/mm/aaaa"
+                                            placeholderText: qsTr("dd/mm/aaaa")
+                                            placeholderTextColor: Style.textFaint
+                                            color: Style.text
                                             font.family: Style.fontFamily
+                                            background: Rectangle {
+                                                radius: Style.mediumRadius
+                                                color: Style.sunken
+                                                border.color: Style.divider
+                                                border.width: 1
+                                            }
                                             onTextEdited: root.dayManual = text
                                         }
                                         Button {
@@ -725,7 +732,7 @@ Page {
                                             Behavior on opacity { NumberAnimation { duration: 100 } }
                                             implicitHeight: 40
                                             background: Rectangle { radius: 999; color: Style.primary }
-                                            contentItem: Text { text: "Añadir"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                            contentItem: Text { text: qsTr("Añadir"); font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                             onClicked: {
                                                 var parsed = root.parseManualDate(root.dayManual)
                                                 if (!parsed) return
@@ -749,14 +756,14 @@ Page {
                         background: Rectangle {
                             radius: 999
                             color: root.picking ? Style.scopeChipBg("nacional") : Style.surface
-                            border.color: root.picking ? Style.primary : "#D5CEC0"
+                            border.color: root.picking ? Style.primaryBorder : Style.divider
                             border.width: 1
                         }
                         contentItem: RowLayout {
                             anchors.centerIn: parent
                             spacing: 8
                             Image { source: Style.icon("plus"); width: 16; height: 16; sourceSize: Qt.size(16, 16) }
-                            Text { text: "Añadir día usado"; font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: Style.primary }
+                            Text { text: qsTr("Añadir día usado"); font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; color: Style.primaryInk }
                         }
                         onClicked: root.picking = !root.picking
                     }
@@ -769,7 +776,7 @@ Page {
                         implicitHeight: 26
                         background: Rectangle { color: "transparent" }
                         contentItem: Text {
-                            text: (root.hoursOpen ? "− Ocultar" : "+ Añadir") + " horas sueltas"
+                            text: root.hoursOpen ? qsTr("− Ocultar horas sueltas") : qsTr("+ Añadir horas sueltas")
                             font.family: Style.fontFamily
                             font.pixelSize: 13
                             font.weight: Font.Medium
@@ -806,7 +813,7 @@ Page {
 
                                     Text {
                                         Layout.fillWidth: true
-                                        text: "Para ausencias más cortas que un día completo, en horas."
+                                        text: qsTr("Para ausencias más cortas que un día completo, en horas.")
                                         font.family: Style.fontFamily
                                         font.pixelSize: 12
                                         color: Style.textSecondary
@@ -819,17 +826,33 @@ Page {
                                         TextField {
                                             Layout.preferredWidth: 76
                                             text: root.hoursDate
-                                            placeholderText: "dd/mm"
+                                            placeholderText: qsTr("dd/mm")
+                                            placeholderTextColor: Style.textFaint
+                                            color: Style.text
                                             font.family: Style.fontFamily
+                                            background: Rectangle {
+                                                radius: Style.mediumRadius
+                                                color: Style.sunken
+                                                border.color: Style.divider
+                                                border.width: 1
+                                            }
                                             onTextEdited: root.hoursDate = text
                                         }
                                         TextField {
                                             Layout.preferredWidth: 56
                                             text: root.hoursAmount
-                                            placeholderText: "h"
+                                            placeholderText: qsTr("h")
+                                            placeholderTextColor: Style.textFaint
+                                            color: Style.text
                                             horizontalAlignment: Text.AlignHCenter
                                             validator: IntValidator { bottom: 1; top: 24 }
                                             font.family: Style.fontFamily
+                                            background: Rectangle {
+                                                radius: Style.mediumRadius
+                                                color: Style.sunken
+                                                border.color: Style.divider
+                                                border.width: 1
+                                            }
                                             onTextEdited: root.hoursAmount = text
                                         }
                                         Button {
@@ -838,7 +861,7 @@ Page {
                                             Layout.fillWidth: true
                                             implicitHeight: 40
                                             background: Rectangle { radius: 999; color: Style.primary }
-                                            contentItem: Text { text: "Añadir horas"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                            contentItem: Text { text: qsTr("Añadir horas"); font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                             onClicked: {
                                                 var parsed = root.parseManualDate(root.hoursDate)
                                                 var hours = parseInt(root.hoursAmount, 10)
@@ -872,7 +895,7 @@ Page {
                                                     color: Style.scopeChipBg("nacional")
                                                     implicitWidth: hourTagText.implicitWidth + 18
                                                     implicitHeight: hourTagText.implicitHeight + 12
-                                                    Text { id: hourTagText; anchors.centerIn: parent; text: modelData.hours + " h"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; color: Style.primary }
+                                                    Text { id: hourTagText; anchors.centerIn: parent; text: qsTr("%1 h").arg(modelData.hours); font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium; color: Style.primaryInk }
                                                 }
                                                 Button {
                                                     opacity: pressed ? 0.6 : 1.0
@@ -910,7 +933,7 @@ Page {
                         spacing: 18
 
                         Text {
-                            text: "DÍAS YA GASTADOS"
+                            text: qsTr("DÍAS YA GASTADOS")
                             font.family: Style.fontFamily
                             font.pixelSize: 11
                             font.weight: Font.Medium
@@ -934,7 +957,7 @@ Page {
                                 Layout.fillWidth: true
                                 spacing: 3
                                 Text { Layout.alignment: Qt.AlignHCenter; text: root.usedCount; font.family: Style.fontFamily; font.pixelSize: 64; font.weight: Font.Bold; font.letterSpacing: -2.9; color: Style.text }
-                                Text { Layout.alignment: Qt.AlignHCenter; text: "de " + root.totalDays + " días"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; color: Style.textSecondary }
+                                Text { Layout.alignment: Qt.AlignHCenter; text: qsTr("de %1 días").arg(root.totalDays); font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; color: Style.textSecondary }
                             }
                             Button {
                                 opacity: pressed ? 0.6 : 1.0
@@ -949,7 +972,7 @@ Page {
                         Rectangle {
                             Layout.fillWidth: true
                             height: 7; radius: 99
-                            color: "#F1EBE0"
+                            color: Style.track
                             Rectangle {
                                 height: parent.height; radius: 99
                                 color: Style.accent
@@ -965,7 +988,7 @@ Page {
         }
 
         OnboardingFooter {
-            text: "Terminar"
+            text: qsTr("Terminar")
             baseColor: Style.accent
             disabledColor: Style.accentDisabled
             showIcon: false
@@ -982,5 +1005,11 @@ Page {
                 root.finished()
             }
         }
+    }
+
+    SettingsModal {
+        anchors.fill: parent
+        open: root.settingsOpen
+        onClosed: root.settingsOpen = false
     }
 }

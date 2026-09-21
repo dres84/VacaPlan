@@ -23,3 +23,10 @@ qrc_*.cpp
 ui_*.h
 *.qm
 .DS_Store
+
+# Android release signing — never commit the real signing key or its
+# credentials. Back these up somewhere safe outside this repo.
+android/keystore.properties
+android/*.jks
+android/*.keystore
+android/vacaplan-release-key.jks

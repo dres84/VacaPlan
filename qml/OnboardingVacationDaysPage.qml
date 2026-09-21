@@ -10,7 +10,14 @@ Page {
     signal daysConfirmed()
     signal back()
 
+    property bool settingsOpen: false
+
     background: Rectangle { color: Style.background }
+
+    // Reset scroll position whenever this page becomes the active StackView
+    // item — otherwise coming back via "Atrás" lands mid-scroll instead of
+    // at the top.
+    StackView.onActivated: scrollView.contentY = 0
 
     property int totalDays: dataCenter ? dataCenter.data.totalVacationDays : 22
     readonly property var presets: [20, 22, 23, 25]
@@ -27,8 +34,9 @@ Page {
 
         StepHeader {
             step: 2
-            linkText: "Atrás"
+            linkText: qsTr("Atrás")
             onLinkClicked: root.back()
+            onSettingsClicked: root.settingsOpen = true
         }
 
         Flickable {
@@ -57,7 +65,7 @@ Page {
 
                     Image { source: Style.icon("beach-umbrella"); width: 34; height: 34; sourceSize: Qt.size(34, 34) }
                     Text {
-                        text: "¿Cuántos días de vacaciones tienes?"
+                        text: qsTr("¿Cuántos días de vacaciones tienes?")
                         font.family: Style.fontFamily
                         font.pixelSize: 29
                         font.weight: Font.Bold
@@ -67,7 +75,7 @@ Page {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: "Los días laborables de vacaciones a los que tienes derecho cada año, según tu convenio o contrato. Sin contar festivos ni fines de semana."
+                        text: qsTr("Los días laborables de vacaciones a los que tienes derecho cada año, según tu convenio o contrato. Sin contar festivos ni fines de semana.")
                         font.family: Style.fontFamily
                         font.pixelSize: 14
                         color: Style.textSecondary
@@ -111,7 +119,7 @@ Page {
                         spacing: 20
 
                         Text {
-                            text: "DÍAS AL AÑO"
+                            text: qsTr("DÍAS AL AÑO")
                             font.family: Style.fontFamily
                             font.pixelSize: Style.caption
                             font.weight: Font.Medium
@@ -150,7 +158,7 @@ Page {
                                 }
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
-                                    text: "días laborables"
+                                    text: qsTr("días laborables")
                                     font.family: Style.fontFamily
                                     font.pixelSize: Style.caption
                                     font.weight: Font.Medium
@@ -235,7 +243,7 @@ Page {
                         }
                         Text {
                             Layout.fillWidth: true
-                            text: "Lo habitual en España son <b>22 días laborables</b> (30 naturales). Podrás cambiarlo después desde ajustes."
+                            text: qsTr("Lo habitual en España son <b>22 días laborables</b> (30 naturales). Podrás cambiarlo después desde ajustes.")
                             textFormat: Text.RichText
                             font.family: Style.fontFamily
                             font.pixelSize: 13
@@ -250,12 +258,18 @@ Page {
         }
 
         OnboardingFooter {
-            text: "Continuar"
+            text: qsTr("Continuar")
             baseColor: Style.primary
             onClicked: {
                 root.dataCenter.setTotalVacationDays(root.totalDays)
                 root.daysConfirmed()
             }
         }
+    }
+
+    SettingsModal {
+        anchors.fill: parent
+        open: root.settingsOpen
+        onClosed: root.settingsOpen = false
     }
 }

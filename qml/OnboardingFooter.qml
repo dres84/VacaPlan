@@ -10,7 +10,7 @@ import Vacaplan 1.0
 // doesn't exist yet or it's ready.
 Rectangle {
     id: root
-    property string text: "Continuar"
+    property string text: qsTr("Continuar")
     property color baseColor: Style.primary
     property color disabledColor: Style.primaryDisabled
     property bool showIcon: true

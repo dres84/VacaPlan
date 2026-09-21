@@ -17,6 +17,12 @@ repositories {
 
 apply plugin: qtGradlePluginType
 
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     //noinspection GradleDependency
@@ -32,10 +38,10 @@ android {
 
     androidPackageName = 'com.dreSoft.vacaplan'
 
-    androidBuildToolsVersion = '34.0.0'
-    androidCompileSdkVersion = 34
+    androidBuildToolsVersion = '36.0.0'
+    androidCompileSdkVersion = 36
     qtMinSdkVersion = 23
-    qtTargetSdkVersion = 34
+    qtTargetSdkVersion = 36
 
     sourceSets {
         main {
@@ -67,5 +73,25 @@ android {
         minSdkVersion qtMinSdkVersion
         targetSdkVersion qtTargetSdkVersion
         ndk.abiFilters = qtTargetAbiList.split(",")
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+        }
     }
 }
